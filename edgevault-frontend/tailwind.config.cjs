@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./index.html", // The main HTML entry point
     "./src/**/*.{js,ts,jsx,tsx}", // All component and script files in the src folder
