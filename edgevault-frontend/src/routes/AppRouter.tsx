@@ -1,9 +1,9 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from '../pages/auth/LoginPage.jsx';
-import DashboardPage from '../pages/admin/DashboardPage.jsx';
+import LoginPage from '../pages/auth/LoginPage';
+import DashboardPage from '../pages/admin/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
-
+import UserManagementPage from '../pages/admin/UserManagementPage'; 
 const AppRouter: React.FC = () => {
     return (
         <Routes>
@@ -12,7 +12,7 @@ const AppRouter: React.FC = () => {
             {/* Protected Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<DashboardPage />} />
-                {/* We will add the user management route here later */}
+                <Route path="users" element={<UserManagementPage />} /> 
             </Route>
 
             {/* Redirect root path to login or dashboard */}
