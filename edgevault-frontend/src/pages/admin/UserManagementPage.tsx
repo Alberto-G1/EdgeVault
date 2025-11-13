@@ -41,20 +41,26 @@ const UserManagementPage: React.FC = () => {
 
     const handleSaveUser = async (formData: any) => {
         setIsSubmitting(true);
+        const payload = { 
+            email: formData.email, 
+            enabled: formData.enabled, 
+            roles: formData.roles, 
+            departmentId: formData.departmentId 
+        };
+
         const promise = userToEdit
-            ? updateUser(userToEdit.id, { email: formData.email, enabled: formData.enabled, roles: formData.roles })
-            : createUser({ username: formData.username, email: formData.email, password: formData.password, roles: formData.roles });
+            ? updateUser(userToEdit.id, payload)
+            : createUser({ ...payload, username: formData.username, password: formData.password });
 
         try {
             await toast.promise(promise, {
                 loading: 'Saving user...',
                 success: `User ${userToEdit ? 'updated' : 'created'} successfully!`,
-                error: `Failed to save user.`,
+                error: (err) => err.response?.data?.message || 'Failed to save user.',
             });
             handleCloseModal();
             fetchUsers(); // Refresh the list
         } catch (error: any) {
-            // Toast automatically shows the error message
             console.error(error.response?.data?.message || error.message);
         } finally {
             setIsSubmitting(false);
@@ -85,7 +91,7 @@ const UserManagementPage: React.FC = () => {
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="flex items-center px-4 py-2 text-white bg-cyan-600 rounded-md hover:bg-cyan-700"
+                    className="btn-primary flex items-center"
                 >
                     <Plus size={20} className="mr-2" />
                     Add User
@@ -98,6 +104,7 @@ const UserManagementPage: React.FC = () => {
                         <tr>
                             <th className="th-style">Username</th>
                             <th className="th-style">Email</th>
+                            <th className="th-style">Department</th>
                             <th className="th-style">Status</th>
                             <th className="th-style">Roles</th>
                             <th className="th-style text-right">Actions</th>
@@ -108,6 +115,7 @@ const UserManagementPage: React.FC = () => {
                             <tr key={user.id}>
                                 <td className="td-style font-medium">{user.username}</td>
                                 <td className="td-style">{user.email}</td>
+                                <td className="td-style">{user.departmentName}</td>
                                 <td className="td-style">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                         user.enabled
@@ -140,7 +148,6 @@ const UserManagementPage: React.FC = () => {
     );
 };
 
-// Add helper classes for table styling
 const thStyle = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider";
 const tdStyle = "px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200";
 

@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 import UserManagementPage from '../pages/admin/UserManagementPage';
 import RoleManagementPage from '../pages/admin/RoleManagementPage';
 import RoleFormPage from '../pages/admin/RoleFormPage';
+import DepartmentManagementPage from '../pages/admin/DepartmentManagementPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -20,6 +21,7 @@ const AppRouter: React.FC = () => {
                 <Route path="roles" element={<RoleManagementPage />} />
                 <Route path="roles/new" element={<RoleFormPage />} /> 
                 <Route path="roles/edit/:id" element={<RoleFormPage />} /> 
+                <Route path="departments" element={<DepartmentManagementPage />} /> 
             </Route>
 
             <Route path="*" element={<Navigate to="/login" />} />

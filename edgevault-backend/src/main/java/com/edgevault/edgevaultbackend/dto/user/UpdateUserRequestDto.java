@@ -16,4 +16,7 @@ public class UpdateUserRequestDto {
 
     @NotEmpty(message = "User must have at least one role")
     private Set<String> roles;
+
+    @jakarta.validation.constraints.NotNull(message = "Department ID is required")
+    private Long departmentId;
 }

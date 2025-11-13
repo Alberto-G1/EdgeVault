@@ -8,13 +8,16 @@ interface CreateUserPayload {
     email: string;
     password: string;
     roles: string[];
+    departmentId: number; 
+
 }
 
-// UpdateUserRequestDto
 interface UpdateUserPayload {
     email: string;
     enabled: boolean;
     roles: string[];
+    departmentId: number; 
+    description: string;
 }
 
 

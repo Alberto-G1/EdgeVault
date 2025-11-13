@@ -29,7 +29,7 @@ public class RoleController {
     public ResponseEntity<RoleDto> getRoleById(@PathVariable Long id) {
         return ResponseEntity.ok(roleService.getRoleById(id));
     }
-    
+
     @PostMapping
     public ResponseEntity<RoleDto> createRole(@Valid @RequestBody RoleRequestDto request) {
         RoleDto createdRole = roleService.createRole(request);
