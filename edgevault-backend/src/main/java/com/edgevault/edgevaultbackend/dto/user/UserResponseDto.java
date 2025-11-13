@@ -17,4 +17,5 @@ public class UserResponseDto {
     private String email;
     private boolean enabled;
     private Set<String> roles;
+    private String departmentName;
 }

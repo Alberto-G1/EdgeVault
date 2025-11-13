@@ -9,6 +9,8 @@ import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
+import com.edgevault.edgevaultbackend.model.department.Department;
+import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DepartmentRepository departmentRepository;
 
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
@@ -46,6 +49,11 @@ public class UserService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEnabled(true);
+
+        // --- ASSIGN DEPARTMENT ---
+        Department department = departmentRepository.findById(request.getDepartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Department not found with id: " + request.getDepartmentId()));
+        user.setDepartment(department);
 
         Set<Role> roles = request.getRoles().stream()
                 .map(roleName -> roleRepository.findByName(roleName)
@@ -71,6 +79,11 @@ public class UserService {
         }
 
         user.setEnabled(request.isEnabled());
+
+        // --- UPDATE DEPARTMENT ---
+        Department department = departmentRepository.findById(request.getDepartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Department not found with id: " + request.getDepartmentId()));
+        user.setDepartment(department);
 
         Set<Role> roles = request.getRoles().stream()
                 .map(roleName -> roleRepository.findByName(roleName)
@@ -109,6 +122,7 @@ public class UserService {
                 .roles(user.getRoles().stream()
                         .map(Role::getName)
                         .collect(Collectors.toSet()))
+                .departmentName(user.getDepartment() != null ? user.getDepartment().getName() : "N/A")
                 .build();
     }
 }

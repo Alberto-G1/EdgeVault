@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.edgevault.edgevaultbackend.model.department.Department;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,6 +44,10 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     // UserDetails implementation methods
 
