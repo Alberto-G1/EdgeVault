@@ -1,4 +1,4 @@
-package com.edgevault.edgevaultbackend.model;
+package com.edgevault.edgevaultbackend.model.role;
 
 import jakarta.persistence.*;
 import lombok.Getter;

@@ -1,9 +1,9 @@
 package com.edgevault.edgevaultbackend.config;
 
-import com.edgevault.edgevaultbackend.model.Role;
-import com.edgevault.edgevaultbackend.model.User;
-import com.edgevault.edgevaultbackend.repository.RoleRepository;
-import com.edgevault.edgevaultbackend.repository.UserRepository;
+import com.edgevault.edgevaultbackend.model.role.Role;
+import com.edgevault.edgevaultbackend.model.user.User;
+import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
+import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -46,7 +46,7 @@ public class DataInitializer implements CommandLineRunner {
             adminUser.setRoles(Set.of(superAdminRole));
             adminUser.setEnabled(true);
             userRepository.save(adminUser);
-            System.out.println("Created SUPER_ADMIN user: sAdministrator");
+            System.out.println("Created SUPER_ADMIN user: Administrator");
         } else {
             System.out.println("SUPER_ADMIN user already exists.");
         }

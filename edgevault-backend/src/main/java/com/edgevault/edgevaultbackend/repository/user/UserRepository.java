@@ -1,6 +1,6 @@
-package com.edgevault.edgevaultbackend.repository;
+package com.edgevault.edgevaultbackend.repository.user;
 
-import com.edgevault.edgevaultbackend.model.User;
+import com.edgevault.edgevaultbackend.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

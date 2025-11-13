@@ -1,6 +1,6 @@
-package com.edgevault.edgevaultbackend.repository;
+package com.edgevault.edgevaultbackend.repository.role;
 
-import com.edgevault.edgevaultbackend.model.Role;
+import com.edgevault.edgevaultbackend.model.role.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
