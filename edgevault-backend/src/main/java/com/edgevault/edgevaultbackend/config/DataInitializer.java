@@ -1,28 +1,33 @@
 package com.edgevault.edgevaultbackend.config;
 
+import com.edgevault.edgevaultbackend.model.permission.Permission;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.edgevault.edgevaultbackend.repository.permission.PermissionRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionRepository permissionRepository;
 
-    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.permissionRepository = permissionRepository;
     }
 
     @Override
@@ -30,18 +35,38 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         System.out.println("Starting data initialization...");
 
-        // Create SUPER_ADMIN role if it doesn't exist
-        Role superAdminRole = createRoleIfNotFound("SUPER_ADMIN");
-        // Create standard USER role if it doesn't exist
-        createRoleIfNotFound("USER");
+        // --- UPDATED PERMISSION NAMES ---
+        List<String> permissionNames = Arrays.asList(
+                "USER_READ", "USER_CREATE", "USER_UPDATE", "USER_DELETE",
+                "ROLE_READ", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE",
+                "DEPARTMENT_READ", "DEPARTMENT_CREATE", "DEPARTMENT_UPDATE", "DEPARTMENT_DELETE",
+                "DOCUMENT_READ", "DOCUMENT_CREATE", "DOCUMENT_UPDATE", "DOCUMENT_DELETE", "DOCUMENT_SHARE"
+        );
+        // -----------------------------
 
-        // Create Super Admin User if it doesn't exist
+        Set<Permission> allPermissions = permissionNames.stream()
+                .map(this::createPermissionIfNotFound)
+                .collect(Collectors.toSet());
+
+        Role superAdminRole = createRoleIfNotFound("SUPER_ADMIN");
+        superAdminRole.setPermissions(allPermissions);
+        roleRepository.save(superAdminRole);
+
+        Role userRole = createRoleIfNotFound("USER");
+        // --- UPDATED USER PERMISSIONS ---
+        Set<Permission> userPermissions = Set.of(
+                createPermissionIfNotFound("DOCUMENT_READ"),
+                createPermissionIfNotFound("DOCUMENT_CREATE")
+        );
+        // ------------------------------
+        userRole.setPermissions(userPermissions);
+        roleRepository.save(userRole);
+
         Optional<User> adminUserOptional = userRepository.findByUsername("Administrator");
         if (adminUserOptional.isEmpty()) {
             User adminUser = new User();
             adminUser.setUsername("Administrator");
             adminUser.setEmail("admin@edgevault.com");
-            // IMPORTANT: Use a strong, unique password in a real environment
             adminUser.setPassword(passwordEncoder.encode("Admin@123"));
             adminUser.setRoles(Set.of(superAdminRole));
             adminUser.setEnabled(true);
@@ -55,13 +80,15 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private Role createRoleIfNotFound(String roleName) {
-        Optional<Role> roleOptional = roleRepository.findByName(roleName);
-        if (roleOptional.isEmpty()) {
-            Role newRole = new Role(roleName);
-            roleRepository.save(newRole);
-            System.out.println("Created role: " + roleName);
-            return newRole;
-        }
-        return roleOptional.get();
+        return roleRepository.findByName(roleName)
+                .orElse(new Role(roleName));
+    }
+
+    private Permission createPermissionIfNotFound(String permissionName) {
+        return permissionRepository.findByName(permissionName)
+                .orElseGet(() -> {
+                    System.out.println("Creating permission: " + permissionName);
+                    return permissionRepository.save(new Permission(permissionName));
+                });
     }
 }
