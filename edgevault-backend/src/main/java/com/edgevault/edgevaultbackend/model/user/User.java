@@ -1,5 +1,6 @@
 package com.edgevault.edgevaultbackend.model.user;
 
+import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -8,8 +9,9 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import com.edgevault.edgevaultbackend.model.department.Department;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,6 +28,7 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // --- System & Login Information ---
     @Column(nullable = false, unique = true)
     private String username;
 
@@ -35,7 +38,49 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    private boolean enabled = true;
+    private LocalDateTime lastLogin;
+
+    private LocalDateTime passwordLastUpdated;
+
+    @Column(nullable = false)
+    private boolean passwordChangeRequired = true;
+
+    // We can use an enum for better type safety
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT") // Use LONGTEXT for maximum capacity
+    private String profilePictureUrl;
+
+    private String firstName;
+
+    private String lastName;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    private LocalDate dateOfBirth;
+
+    private String phoneNumber;
+
+    private String alternativePhoneNumber;
+
+    private String city;
+
+    private String district;
+
+    private String country;
+
+    // --- Security Settings ---
+    private String backupRecoveryEmail;
+
+    // --- Work / Organizational Information ---
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -45,18 +90,23 @@ public class User implements UserDetails {
     )
     private Set<Role> roles = new HashSet<>();
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "department_id")
-    private Department department;
+    private String employeeId;
 
-    @Column(nullable = false)
-    private boolean passwordChangeRequired = true;
+    private String jobTitle;
 
-    // UserDetails implementation methods
+    private LocalDate dateJoined;
 
+    private String supervisorName;
+
+    // Overriding isEnabled() to be based on AccountStatus
+    @Override
+    public boolean isEnabled() {
+        return this.accountStatus == AccountStatus.ACTIVE;
+    }
+
+    // --- Boilerplate UserDetails methods ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // This must return the PERMISSIONS for @PreAuthorize to work correctly
         return this.roles.stream()
                 .flatMap(role -> role.getPermissions().stream())
                 .map(permission -> new SimpleGrantedAuthority(permission.getName()))
@@ -64,22 +114,13 @@ public class User implements UserDetails {
     }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return this.accountStatus != AccountStatus.LOCKED;
     }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return this.enabled;
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 }
