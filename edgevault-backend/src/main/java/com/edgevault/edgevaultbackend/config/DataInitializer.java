@@ -49,7 +49,9 @@ public class DataInitializer implements CommandLineRunner {
                 // Document Management
                 "DOCUMENT_READ", "DOCUMENT_CREATE", "DOCUMENT_UPDATE", "DOCUMENT_DELETE", "DOCUMENT_SHARE",
                 // Audit Permissions
-                "AUDIT_READ", "AUDIT_EXPORT"
+                "AUDIT_READ", "AUDIT_EXPORT",
+
+                "WORK_PROFILE_EDIT"
         );
 
         permissionNames.forEach(this::createPermissionIfNotFound);
@@ -58,6 +60,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // 1. Super Admin (all permissions)
         Role superAdminRole = createRoleIfNotFound("Super Admin");
+        // Re-fetch all permissions to include the new one
         Set<Permission> allPermissions = new HashSet<>(permissionRepository.findAll());
         superAdminRole.setPermissions(allPermissions);
         roleRepository.save(superAdminRole);
@@ -104,7 +107,6 @@ public class DataInitializer implements CommandLineRunner {
             adminUser.setEmail("admin@edgevault.com");
             adminUser.setPassword(passwordEncoder.encode("Admin@123"));
             adminUser.setRoles(Set.of(superAdminRole));
-            adminUser.setEnabled(true);
             adminUser.setPasswordChangeRequired(false); // Admin does not need to change password
             userRepository.save(adminUser);
             System.out.println("Created SUPER_ADMIN user: Administrator");

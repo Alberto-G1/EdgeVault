@@ -49,7 +49,6 @@ public class UserService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode("Default@123U"));
         user.setPasswordChangeRequired(true); // Force change on first login
-        user.setEnabled(true);
 
         // --- ASSIGN DEPARTMENT ---
         Department department = departmentRepository.findById(request.getDepartmentId())
@@ -79,7 +78,6 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
 
-        user.setEnabled(request.isEnabled());
 
         // --- UPDATE DEPARTMENT ---
         Department department = departmentRepository.findById(request.getDepartmentId())
