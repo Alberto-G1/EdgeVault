@@ -13,12 +13,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/permissions")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('SUPER_ADMIN')")
 public class PermissionController {
 
     private final PermissionService permissionService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_READ')") // Reading permissions is part of reading roles
     public ResponseEntity<List<String>> getAllPermissions() {
         return ResponseEntity.ok(permissionService.getAllPermissions());
     }

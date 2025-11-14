@@ -47,7 +47,8 @@ public class UserService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode("Default@123U"));
+        user.setPasswordChangeRequired(true); // Force change on first login
         user.setEnabled(true);
 
         // --- ASSIGN DEPARTMENT ---
