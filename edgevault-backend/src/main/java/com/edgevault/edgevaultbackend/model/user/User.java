@@ -49,12 +49,17 @@ public class User implements UserDetails {
     @JoinColumn(name = "department_id")
     private Department department;
 
+    @Column(nullable = false)
+    private boolean passwordChangeRequired = true;
+
     // UserDetails implementation methods
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+        // This must return the PERMISSIONS for @PreAuthorize to work correctly
+        return this.roles.stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> new SimpleGrantedAuthority(permission.getName()))
                 .collect(Collectors.toList());
     }
 

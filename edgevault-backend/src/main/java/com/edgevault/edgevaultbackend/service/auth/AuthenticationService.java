@@ -9,6 +9,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
@@ -27,8 +30,16 @@ public class AuthenticationService {
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(); // Should not happen if auth is successful
         var jwtToken = jwtService.generateToken(user);
+
+        // Gather all unique permissions from all of the user's roles
+        Set<String> permissions = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> permission.getName())
+                .collect(Collectors.toSet());
+
         return AuthenticationResponse.builder()
                 .token(jwtToken)
+                .permissions(permissions) // Include the aggregated permissions in the response
                 .build();
     }
 }

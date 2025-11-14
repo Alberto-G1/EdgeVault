@@ -10,11 +10,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 @Component
 public class DataInitializer implements CommandLineRunner {
 
@@ -35,33 +38,65 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         System.out.println("Starting data initialization...");
 
-        // --- UPDATED PERMISSION NAMES ---
+        // --- ALL SYSTEM PERMISSIONS ---
         List<String> permissionNames = Arrays.asList(
+                // User Management
                 "USER_READ", "USER_CREATE", "USER_UPDATE", "USER_DELETE",
+                // Role Management
                 "ROLE_READ", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE",
+                // Department Management
                 "DEPARTMENT_READ", "DEPARTMENT_CREATE", "DEPARTMENT_UPDATE", "DEPARTMENT_DELETE",
-                "DOCUMENT_READ", "DOCUMENT_CREATE", "DOCUMENT_UPDATE", "DOCUMENT_DELETE", "DOCUMENT_SHARE"
+                // Document Management
+                "DOCUMENT_READ", "DOCUMENT_CREATE", "DOCUMENT_UPDATE", "DOCUMENT_DELETE", "DOCUMENT_SHARE",
+                // Audit Permissions
+                "AUDIT_READ", "AUDIT_EXPORT"
         );
-        // -----------------------------
 
-        Set<Permission> allPermissions = permissionNames.stream()
-                .map(this::createPermissionIfNotFound)
-                .collect(Collectors.toSet());
+        permissionNames.forEach(this::createPermissionIfNotFound);
 
-        Role superAdminRole = createRoleIfNotFound("SUPER_ADMIN");
+        // --- ROLE DEFINITIONS ---
+
+        // 1. Super Admin (all permissions)
+        Role superAdminRole = createRoleIfNotFound("Super Admin");
+        Set<Permission> allPermissions = new HashSet<>(permissionRepository.findAll());
         superAdminRole.setPermissions(allPermissions);
         roleRepository.save(superAdminRole);
 
-        Role userRole = createRoleIfNotFound("USER");
-        // --- UPDATED USER PERMISSIONS ---
-        Set<Permission> userPermissions = Set.of(
+        // 2. Department User
+        Role deptUserRole = createRoleIfNotFound("Department User");
+        deptUserRole.setPermissions(new HashSet<>(Set.of(
                 createPermissionIfNotFound("DOCUMENT_READ"),
                 createPermissionIfNotFound("DOCUMENT_CREATE")
-        );
-        // ------------------------------
-        userRole.setPermissions(userPermissions);
-        roleRepository.save(userRole);
+        )));
+        roleRepository.save(deptUserRole);
 
+        // 3. Department Manager
+        Role deptManagerRole = createRoleIfNotFound("Department Manager");
+        deptManagerRole.setPermissions(new HashSet<>(Set.of(
+                createPermissionIfNotFound("DOCUMENT_READ"),
+                createPermissionIfNotFound("DOCUMENT_CREATE"),
+                createPermissionIfNotFound("DOCUMENT_UPDATE"),
+                createPermissionIfNotFound("DOCUMENT_DELETE"), // With workflow
+                createPermissionIfNotFound("DOCUMENT_SHARE")  // With workflow
+        )));
+        roleRepository.save(deptManagerRole);
+
+        // 4. Auditor
+        Role auditorRole = createRoleIfNotFound("Auditor");
+        auditorRole.setPermissions(new HashSet<>(Set.of(
+                createPermissionIfNotFound("AUDIT_READ"),
+                createPermissionIfNotFound("AUDIT_EXPORT"),
+                createPermissionIfNotFound("DOCUMENT_READ") // Read-only access to documents
+        )));
+        roleRepository.save(auditorRole);
+
+        // 5. External Partner (Guest)
+        Role guestRole = createRoleIfNotFound("External Partner");
+        guestRole.setPermissions(new HashSet<>()); // No permissions by default
+        roleRepository.save(guestRole);
+
+
+        // --- SEED SUPER ADMIN USER ---
         Optional<User> adminUserOptional = userRepository.findByUsername("Administrator");
         if (adminUserOptional.isEmpty()) {
             User adminUser = new User();
@@ -70,6 +105,7 @@ public class DataInitializer implements CommandLineRunner {
             adminUser.setPassword(passwordEncoder.encode("Admin@123"));
             adminUser.setRoles(Set.of(superAdminRole));
             adminUser.setEnabled(true);
+            adminUser.setPasswordChangeRequired(false); // Admin does not need to change password
             userRepository.save(adminUser);
             System.out.println("Created SUPER_ADMIN user: Administrator");
         } else {

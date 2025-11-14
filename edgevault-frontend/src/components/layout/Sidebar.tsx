@@ -1,8 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Shield, Building } from 'lucide-react';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const Sidebar: React.FC = () => {
+    const { hasAnyPermission } = usePermissions();
     const linkClasses = "flex items-center p-3 my-1 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200";
     const activeLinkClasses = "bg-cyan-600 text-white";
 
@@ -19,30 +21,36 @@ const Sidebar: React.FC = () => {
                     <LayoutDashboard className="w-5 h-5 mr-3" />
                     Dashboard
                 </NavLink>
-                <NavLink
-                    to="/admin/departments"
-                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                >
-                    <Building className="w-5 h-5 mr-3" />
-                    Departments
-                </NavLink>
-                 <NavLink
-                    to="/admin/roles"
-                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                >
-                    <Shield className="w-5 h-5 mr-3" />
-                    Role Management
-                </NavLink>
-                {/* --- ADDED LINK --- */}
-                <NavLink
-                    to="/admin/users"
-                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                >
-                    <Users className="w-5 h-5 mr-3" />
-                    User Management
-                </NavLink>
-                 {/* ------------------ */}
 
+                {hasAnyPermission(['USER_READ', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE']) && (
+                    <NavLink
+                        to="/admin/users"
+                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    >
+                        <Users className="w-5 h-5 mr-3" />
+                        User Management
+                    </NavLink>
+                )}
+
+                {hasAnyPermission(['ROLE_READ', 'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE']) && (
+                    <NavLink
+                        to="/admin/roles"
+                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    >
+                        <Shield className="w-5 h-5 mr-3" />
+                        Role Management
+                    </NavLink>
+                )}
+
+                {hasAnyPermission(['DEPARTMENT_READ', 'DEPARTMENT_CREATE', 'DEPARTMENT_UPDATE', 'DEPARTMENT_DELETE']) && (
+                     <NavLink
+                        to="/admin/departments"
+                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    >
+                        <Building className="w-5 h-5 mr-3" />
+                        Departments
+                    </NavLink>
+                )}
             </nav>
             <div className="p-4 border-t border-gray-700 text-center text-xs text-gray-500">
                 EdgeVault v1.0.0

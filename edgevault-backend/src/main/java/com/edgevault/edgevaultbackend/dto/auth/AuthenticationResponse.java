@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.Set; // <-- IMPORT
 
 @Data
 @Builder
@@ -11,4 +12,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthenticationResponse {
     private String token;
+    private Set<String> permissions; // <-- ADD THIS FIELD
 }

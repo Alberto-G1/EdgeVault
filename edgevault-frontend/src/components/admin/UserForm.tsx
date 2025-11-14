@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { User, Department } from '../../types/user';
+import type { User, Department, Role } from '../../types/user';
 import { getAllDepartments } from '../../api/departmentService';
+import { getAllRoles } from '../../api/roleService';
 import { toast } from 'react-hot-toast';
 
 interface UserFormProps {
@@ -13,40 +14,44 @@ interface UserFormProps {
 const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoading }) => {
     const isEditMode = !!userToEdit;
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
 
     const [formData, setFormData] = useState({
         username: '',
         email: '',
         password: '',
-        roles: ['USER'],
+        roles: ['Department User'], // Sensible default
         enabled: true,
-        departmentId: '', // Stored as a string for the select input value
+        departmentId: '', 
     });
 
     useEffect(() => {
-        const fetchDepartments = async () => {
+        const fetchFormData = async () => {
             try {
-                const data = await getAllDepartments();
-                setDepartments(data);
-                if (!isEditMode && data.length > 0) {
-                    // Set a default department for new users if one isn't already set
-                    setFormData(prev => ({ ...prev, departmentId: String(data[0].id) }));
+                const [depts, roles] = await Promise.all([
+                    getAllDepartments(),
+                    getAllRoles()
+                ]);
+                setDepartments(depts);
+                setAvailableRoles(roles);
+
+                if (!isEditMode && depts.length > 0) {
+                    setFormData(prev => ({ ...prev, departmentId: String(depts[0].id) }));
                 }
             } catch (error) {
-                toast.error("Could not load departments for the form.");
+                toast.error("Could not load form data (roles/departments).");
             }
         };
-        fetchDepartments();
+        fetchFormData();
     }, [isEditMode]);
 
     useEffect(() => {
         if (isEditMode && userToEdit && departments.length > 0) {
-            // Find the department ID that matches the user's department name
             const userDept = departments.find(d => d.name === userToEdit.departmentName);
             setFormData({
                 username: userToEdit.username,
                 email: userToEdit.email,
-                password: '', // Password is not sent back for editing
+                password: '',
                 roles: userToEdit.roles.map(r => r.name),
                 enabled: userToEdit.enabled,
                 departmentId: userDept ? String(userDept.id) : '',
@@ -70,7 +75,6 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Convert departmentId back to a number before saving
         onSave({ ...formData, departmentId: Number(formData.departmentId) });
     };
 
@@ -99,20 +103,8 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                     required
                 />
             </div>
-            {!isEditMode && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="mt-1 block w-full input-style"
-                        required
-                        minLength={8}
-                    />
-                </div>
-            )}
+            {/* Password field is now hidden for create, as it uses a default */}
+            
             <div>
                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
                  <select
@@ -138,8 +130,9 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                     className="mt-1 block w-full input-style h-24"
                     required
                  >
-                    <option value="USER">USER</option>
-                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    {availableRoles.map(role => (
+                        <option key={role.id} value={role.name}>{role.name}</option>
+                    ))}
                  </select>
                  <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple roles.</p>
             </div>

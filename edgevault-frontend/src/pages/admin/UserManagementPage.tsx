@@ -5,8 +5,10 @@ import { toast } from 'react-hot-toast';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import UserForm from '../../components/admin/UserForm';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const UserManagementPage: React.FC = () => {
+    const { hasPermission, hasAnyPermission } = usePermissions();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,7 +61,7 @@ const UserManagementPage: React.FC = () => {
                 error: (err) => err.response?.data?.message || 'Failed to save user.',
             });
             handleCloseModal();
-            fetchUsers(); // Refresh the list
+            fetchUsers();
         } catch (error: any) {
             console.error(error.response?.data?.message || error.message);
         } finally {
@@ -75,13 +77,12 @@ const UserManagementPage: React.FC = () => {
                     success: 'User deleted successfully!',
                     error: (err) => err.response?.data?.message || 'Failed to delete user.',
                 });
-                fetchUsers(); // Refresh the list
+                fetchUsers();
             } catch (error) {
                  console.error(error);
             }
         }
     };
-
 
     if (loading) return <div>Loading users...</div>;
 
@@ -89,13 +90,15 @@ const UserManagementPage: React.FC = () => {
         <div className="container mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="btn-primary flex items-center"
-                >
-                    <Plus size={20} className="mr-2" />
-                    Add User
-                </button>
+                {hasPermission('USER_CREATE') && (
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="btn-primary flex items-center"
+                    >
+                        <Plus size={20} className="mr-2" />
+                        Add User
+                    </button>
+                )}
             </div>
 
             <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
@@ -107,7 +110,9 @@ const UserManagementPage: React.FC = () => {
                             <th className="th-style">Department</th>
                             <th className="th-style">Status</th>
                             <th className="th-style">Roles</th>
-                            <th className="th-style text-right">Actions</th>
+                            {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
+                                <th className="th-style text-right">Actions</th>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -126,10 +131,16 @@ const UserManagementPage: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="td-style">{user.roles.map(r => r.name).join(', ')}</td>
-                                <td className="td-style text-right space-x-2">
-                                     <button onClick={() => handleOpenModal(user)} className="text-blue-500 hover:text-blue-700"><Edit size={18}/></button>
-                                     <button onClick={() => handleDeleteUser(user.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
-                                </td>
+                                {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
+                                    <td className="td-style text-right space-x-2">
+                                        {hasPermission('USER_UPDATE') && (
+                                             <button onClick={() => handleOpenModal(user)} className="text-blue-500 hover:text-blue-700"><Edit size={18}/></button>
+                                        )}
+                                        {hasPermission('USER_DELETE') && (
+                                             <button onClick={() => handleDeleteUser(user.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
+                                        )}
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
