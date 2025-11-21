@@ -9,6 +9,7 @@ import RoleFormPage from '../pages/admin/RoleFormPage';
 import DepartmentManagementPage from '../pages/admin/DepartmentManagementPage';
 import ProfilePage from '../pages/admin/ProfilePage';
 import ProfileEditPage from '../pages/admin/ProfileEditPage';
+import DocumentManagementPage from '../pages/admin/DocumentManagementPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -26,6 +27,7 @@ const AppRouter: React.FC = () => {
                 <Route path="departments" element={<DepartmentManagementPage />} /> 
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="profile/edit" element={<ProfileEditPage />} /> 
+                <Route path="documents" element={<DocumentManagementPage />} /> 
             </Route>
 
             <Route path="*" element={<Navigate to="/login" />} />
