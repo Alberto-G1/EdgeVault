@@ -17,7 +17,8 @@ public class DocumentVersion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, nullable = false)
+    // --- THIS IS THE FIX ---
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) // Use optional = false
     @JoinColumn(name = "document_id")
     private Document document;
 
@@ -25,10 +26,10 @@ public class DocumentVersion {
     private Integer versionNumber;
 
     @Column(nullable = false, unique = true)
-    private String s3ObjectKey; // e.g., "department_id/document_id/uuid_filename.pdf"
+    private String s3ObjectKey;
 
     @Column(nullable = false)
-    private String fileType; // e.g., "application/pdf"
+    private String fileType;
 
     @Column(nullable = false)
     private Long sizeInBytes;
@@ -36,7 +37,8 @@ public class DocumentVersion {
     @Column(nullable = false)
     private LocalDateTime uploadTimestamp;
 
-    @ManyToOne(fetch = FetchType.LAZY, nullable = false)
+    // --- AND THIS IS THE FIX ---
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) // Use optional = false
     @JoinColumn(name = "uploader_id")
     private User uploader;
 }
