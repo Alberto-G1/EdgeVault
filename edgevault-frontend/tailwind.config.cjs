@@ -2,11 +2,17 @@
 module.exports = {
   darkMode: 'class',
   content: [
-    "./index.html", // The main HTML entry point
-    "./src/**/*.{js,ts,jsx,tsx}", // All component and script files in the src folder
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {},
   },
+  variants: {
+    extend: {
+      opacity: ['group-hover'], // Explicitly enable group-hover for the opacity utility
+    },
+  },
+  // -----------------------
   plugins: [],
 }

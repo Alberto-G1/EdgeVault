@@ -10,6 +10,7 @@ import DepartmentManagementPage from '../pages/admin/DepartmentManagementPage';
 import ProfilePage from '../pages/admin/ProfilePage';
 import ProfileEditPage from '../pages/admin/ProfileEditPage';
 import DocumentManagementPage from '../pages/admin/DocumentManagementPage';
+import DocumentDetailPage from '../pages/admin/DocumentDetailPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -28,6 +29,7 @@ const AppRouter: React.FC = () => {
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="profile/edit" element={<ProfileEditPage />} /> 
                 <Route path="documents" element={<DocumentManagementPage />} /> 
+                <Route path="documents/:id" element={<DocumentDetailPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/login" />} />

@@ -32,3 +32,31 @@ export const getMyDepartmentDocuments = async (): Promise<Document[]> => {
 // - downloadDocumentVersion(versionId: number)
 // - uploadNewVersion(documentId: number, file: File)
 // - getDocumentDetails(documentId: number)    
+
+export const getDocumentDetails = async (id: number): Promise<Document> => {
+    const response = await apiClient.get<Document>(`/documents/${id}`);
+    return response.data;
+};
+
+export const requestDocumentDeletion = async (id: number): Promise<void> => {
+    await apiClient.delete(`/documents/${id}/request-deletion`);
+};
+
+// Download is handled differently - we need the raw response
+export const downloadDocumentVersion = async (versionId: number): Promise<{data: Blob, filename: string}> => {
+    const response = await apiClient.get(`/documents/versions/${versionId}/download`, {
+        responseType: 'blob', // Important: tells axios to handle the response as a file
+    });
+
+    // Extract filename from content-disposition header
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'downloaded-file';
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch.length > 1) {
+            filename = filenameMatch[1];
+        }
+    }
+    
+    return { data: response.data, filename };
+};
