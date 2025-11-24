@@ -22,6 +22,7 @@ public class FileStorageService {
         this.bucketName = bucketName;
     }
 
+    // ... rest of the methods are the same ...
     public void uploadFile(String key, MultipartFile file) throws IOException {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
