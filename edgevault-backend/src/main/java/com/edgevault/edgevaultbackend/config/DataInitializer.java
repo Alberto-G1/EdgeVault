@@ -1,8 +1,10 @@
 package com.edgevault.edgevaultbackend.config;
 
+import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.permission.Permission;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
 import com.edgevault.edgevaultbackend.repository.permission.PermissionRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
@@ -25,12 +27,14 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
+    private final DepartmentRepository departmentRepository;
 
-    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository) {
+    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, DepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
+        this.departmentRepository = departmentRepository;
     }
 
     @Override
@@ -38,7 +42,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         System.out.println("Starting data initialization...");
 
-        // --- ALL SYSTEM PERMISSIONS ---
+        // --- STEP 1: CREATE ALL PERMISSIONS FIRST ---
         List<String> permissionNames = Arrays.asList(
                 // User Management
                 "USER_READ", "USER_CREATE", "USER_UPDATE", "USER_DELETE",
@@ -53,14 +57,26 @@ public class DataInitializer implements CommandLineRunner {
 
                 "WORK_PROFILE_EDIT"
         );
-
+        // This loop ensures all permissions are saved to the DB within the transaction
         permissionNames.forEach(this::createPermissionIfNotFound);
+        // ---------------------------------------------
 
-        // --- ROLE DEFINITIONS ---
+
+        // --- STEP 2: CREATE DEPARTMENT ---
+        Department adminDepartment = departmentRepository.findByName("Administration")
+                .orElseGet(() -> {
+                    System.out.println("Creating 'Administration' department.");
+                    Department newDept = new Department("Administration");
+                    newDept.setDescription("Default department for system administrators.");
+                    return departmentRepository.save(newDept);
+                });
+
+
+        // --- STEP 3: CREATE ROLES AND ASSIGN PERMISSIONS ---
 
         // 1. Super Admin (all permissions)
         Role superAdminRole = createRoleIfNotFound("Super Admin");
-        // Re-fetch all permissions to include the new one
+        // NOW this will find all permissions because they were created in Step 1
         Set<Permission> allPermissions = new HashSet<>(permissionRepository.findAll());
         superAdminRole.setPermissions(allPermissions);
         roleRepository.save(superAdminRole);
@@ -68,49 +84,56 @@ public class DataInitializer implements CommandLineRunner {
         // 2. Department User
         Role deptUserRole = createRoleIfNotFound("Department User");
         deptUserRole.setPermissions(new HashSet<>(Set.of(
-                createPermissionIfNotFound("DOCUMENT_READ"),
-                createPermissionIfNotFound("DOCUMENT_CREATE")
+                permissionRepository.findByName("DOCUMENT_READ").get(),
+                permissionRepository.findByName("DOCUMENT_CREATE").get()
         )));
         roleRepository.save(deptUserRole);
 
         // 3. Department Manager
         Role deptManagerRole = createRoleIfNotFound("Department Manager");
         deptManagerRole.setPermissions(new HashSet<>(Set.of(
-                createPermissionIfNotFound("DOCUMENT_READ"),
-                createPermissionIfNotFound("DOCUMENT_CREATE"),
-                createPermissionIfNotFound("DOCUMENT_UPDATE"),
-                createPermissionIfNotFound("DOCUMENT_DELETE"), // With workflow
-                createPermissionIfNotFound("DOCUMENT_SHARE")  // With workflow
+                permissionRepository.findByName("DOCUMENT_READ").get(),
+                permissionRepository.findByName("DOCUMENT_CREATE").get(),
+                permissionRepository.findByName("DOCUMENT_UPDATE").get(),
+                permissionRepository.findByName("DOCUMENT_DELETE").get(),
+                permissionRepository.findByName("DOCUMENT_SHARE").get()
         )));
         roleRepository.save(deptManagerRole);
 
         // 4. Auditor
         Role auditorRole = createRoleIfNotFound("Auditor");
         auditorRole.setPermissions(new HashSet<>(Set.of(
-                createPermissionIfNotFound("AUDIT_READ"),
-                createPermissionIfNotFound("AUDIT_EXPORT"),
-                createPermissionIfNotFound("DOCUMENT_READ") // Read-only access to documents
+                permissionRepository.findByName("AUDIT_READ").get(),
+                permissionRepository.findByName("AUDIT_EXPORT").get(),
+                permissionRepository.findByName("DOCUMENT_READ").get()
         )));
         roleRepository.save(auditorRole);
 
         // 5. External Partner (Guest)
         Role guestRole = createRoleIfNotFound("External Partner");
-        guestRole.setPermissions(new HashSet<>()); // No permissions by default
+        guestRole.setPermissions(new HashSet<>());
         roleRepository.save(guestRole);
 
 
-        // --- SEED SUPER ADMIN USER ---
+        // --- STEP 4: SEED SUPER ADMIN USER ---
         Optional<User> adminUserOptional = userRepository.findByUsername("Administrator");
         if (adminUserOptional.isEmpty()) {
             User adminUser = new User();
             adminUser.setUsername("Administrator");
             adminUser.setEmail("admin@edgevault.com");
             adminUser.setPassword(passwordEncoder.encode("Admin@123"));
-            adminUser.setRoles(Set.of(superAdminRole));
-            adminUser.setPasswordChangeRequired(false); // Admin does not need to change password
+            adminUser.setRoles(new HashSet<>(Set.of(superAdminRole)));
+            adminUser.setPasswordChangeRequired(false);
+            adminUser.setDepartment(adminDepartment);
             userRepository.save(adminUser);
             System.out.println("Created SUPER_ADMIN user: Administrator");
         } else {
+            User existingAdmin = adminUserOptional.get();
+            if (existingAdmin.getDepartment() == null) {
+                existingAdmin.setDepartment(adminDepartment);
+                userRepository.save(existingAdmin);
+                System.out.println("Assigned 'Administration' department to existing admin.");
+            }
             System.out.println("SUPER_ADMIN user already exists.");
         }
 

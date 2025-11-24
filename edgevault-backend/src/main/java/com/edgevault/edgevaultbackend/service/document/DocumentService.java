@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.service.document;
 import com.edgevault.edgevaultbackend.dto.document.DocumentResponseDto;
 import com.edgevault.edgevaultbackend.dto.document.DocumentVersionDto;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
+import com.edgevault.edgevaultbackend.model.department.Department; // <-- Import if not present
 import com.edgevault.edgevaultbackend.model.document.Document;
 import com.edgevault.edgevaultbackend.model.document.DocumentVersion;
 import com.edgevault.edgevaultbackend.model.user.User;
@@ -17,7 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collections; // <-- Import for Collections.emptyList()
 import java.util.List;
+import java.util.Objects; // <-- Import Objects
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,18 +36,22 @@ public class DocumentService {
     public DocumentResponseDto uploadNewDocument(MultipartFile file) throws IOException {
         User currentUser = getCurrentUser();
 
-        // Construct a unique key for S3
-        String s3ObjectKey = buildS3Key(currentUser, file.getOriginalFilename());
+        // --- THIS IS THE FIX ---
+        // Verify that the user belongs to a department before proceeding.
+        Department userDepartment = currentUser.getDepartment();
+        if (Objects.isNull(userDepartment)) {
+            throw new IllegalStateException("Cannot upload document: User '" + currentUser.getUsername() + "' is not assigned to a department.");
+        }
+        // -------------------------
 
-        // Upload to S3
+        String s3ObjectKey = buildS3Key(userDepartment.getId(), file.getOriginalFilename());
+
         fileStorageService.uploadFile(s3ObjectKey, file);
 
-        // Create Document entity
         Document document = new Document();
         document.setOriginalFileName(file.getOriginalFilename());
-        document.setDepartment(currentUser.getDepartment());
+        document.setDepartment(userDepartment);
 
-        // Create DocumentVersion entity
         DocumentVersion version = new DocumentVersion();
         version.setDocument(document);
         version.setVersionNumber(1);
@@ -63,15 +70,21 @@ public class DocumentService {
 
     public List<DocumentResponseDto> getDocumentsForCurrentUserDepartment() {
         User currentUser = getCurrentUser();
-        Long departmentId = currentUser.getDepartment().getId();
-        return documentRepository.findByDepartmentId(departmentId).stream()
+        Department userDepartment = currentUser.getDepartment();
+
+        // If user has no department, they can see no documents.
+        if (Objects.isNull(userDepartment)) {
+            return Collections.emptyList();
+        }
+
+        return documentRepository.findByDepartmentId(userDepartment.getId()).stream()
                 .map(this::mapToDocumentResponseDto)
                 .collect(Collectors.toList());
     }
 
-    private String buildS3Key(User user, String originalFileName) {
+    private String buildS3Key(Long departmentId, String originalFileName) {
         return String.format("%d/%s_%s",
-                user.getDepartment().getId(),
+                departmentId,
                 UUID.randomUUID().toString(),
                 originalFileName);
     }
