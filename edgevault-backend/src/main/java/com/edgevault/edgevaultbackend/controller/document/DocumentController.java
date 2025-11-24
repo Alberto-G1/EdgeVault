@@ -3,6 +3,9 @@ package com.edgevault.edgevaultbackend.controller.document;
 import com.edgevault.edgevaultbackend.dto.document.DocumentResponseDto;
 import com.edgevault.edgevaultbackend.service.document.DocumentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.InputStreamSource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,5 +38,35 @@ public class DocumentController {
     public ResponseEntity<List<DocumentResponseDto>> getMyDepartmentDocuments() {
         List<DocumentResponseDto> documents = documentService.getDocumentsForCurrentUserDepartment();
         return ResponseEntity.ok(documents);
+    }
+
+    // --- NEW ENDPOINT ---
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
+    public ResponseEntity<DocumentResponseDto> getDocumentDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(documentService.getDocumentById(id));
+    }
+
+    // --- NEW ENDPOINT ---
+    @GetMapping("/versions/{versionId}/download")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
+    public ResponseEntity<InputStreamResource> downloadVersion(@PathVariable Long versionId) {
+        DocumentService.DownloadedFile downloadedFile = documentService.downloadDocumentVersion(versionId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + downloadedFile.filename() + "\"");
+        headers.add(HttpHeaders.CONTENT_TYPE, downloadedFile.contentType());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(new InputStreamResource((InputStreamSource) downloadedFile.resource()));
+    }
+
+    // --- NEW ENDPOINT ---
+    @DeleteMapping("/{id}/request-deletion")
+    @PreAuthorize("hasAuthority('DOCUMENT_DELETE')")
+    public ResponseEntity<Void> requestDeletion(@PathVariable Long id) {
+        documentService.requestDocumentDeletion(id);
+        return ResponseEntity.noContent().build();
     }
 }
