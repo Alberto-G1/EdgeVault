@@ -33,6 +33,19 @@ export const getMyDepartmentDocuments = async (): Promise<Document[]> => {
 // - uploadNewVersion(documentId: number, file: File)
 // - getDocumentDetails(documentId: number)    
 
+export const uploadNewVersion = async (documentId: number, file: File): Promise<Document> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post<Document>(`/documents/${documentId}/versions`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
+
 export const getDocumentDetails = async (id: number): Promise<Document> => {
     const response = await apiClient.get<Document>(`/documents/${id}`);
     return response.data;

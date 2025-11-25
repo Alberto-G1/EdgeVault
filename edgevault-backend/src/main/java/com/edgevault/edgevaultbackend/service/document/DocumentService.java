@@ -74,6 +74,49 @@ public class DocumentService {
         return mapToDocumentResponseDto(savedDocument);
     }
 
+    // --- NEW METHOD: UPLOAD NEW VERSION ---
+    @Transactional
+    public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file) throws IOException {
+        User currentUser = getCurrentUser();
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
+
+        // Security Check: Ensure user is in the correct department
+        if (!Objects.equals(document.getDepartment().getId(), currentUser.getDepartment().getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have permission to update this document.");
+        }
+
+        // Determine the new version number
+        Integer latestVersionNumber = document.getLatestVersion().getVersionNumber();
+        Integer newVersionNumber = latestVersionNumber + 1;
+
+        // Construct a new unique S3 key
+        String s3ObjectKey = buildS3Key(document.getDepartment().getId(), file.getOriginalFilename());
+
+        // Upload the new file version to S3
+        fileStorageService.uploadFile(s3ObjectKey, file);
+
+        // Create the new DocumentVersion entity
+        DocumentVersion newVersion = new DocumentVersion();
+        newVersion.setDocument(document);
+        newVersion.setVersionNumber(newVersionNumber);
+        newVersion.setS3ObjectKey(s3ObjectKey);
+        newVersion.setFileType(file.getContentType());
+        newVersion.setSizeInBytes(file.getSize());
+        newVersion.setUploadTimestamp(LocalDateTime.now());
+        newVersion.setUploader(currentUser);
+
+        // Add the new version to the document's version list
+        document.getVersions().add(newVersion);
+        // CRUCIAL: Update the pointer to the latest version
+        document.setLatestVersion(newVersion);
+
+        // Save the parent document. Cascade will save the new version.
+        Document updatedDocument = documentRepository.save(document);
+
+        return mapToDocumentResponseDto(updatedDocument);
+    }
+
     public List<DocumentResponseDto> getDocumentsForCurrentUserDepartment() {
         User currentUser = getCurrentUser();
         Department userDepartment = currentUser.getDepartment();
@@ -182,4 +225,6 @@ public class DocumentService {
                 .uploaderUsername(ver.getUploader().getUsername())
                 .build();
     }
+
+
 }
