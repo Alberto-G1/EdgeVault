@@ -40,21 +40,21 @@ public class DocumentService {
     private final FileStorageService fileStorageService;
 
     @Transactional
-    public DocumentResponseDto uploadNewDocument(MultipartFile file) throws IOException {
+    public DocumentResponseDto uploadNewDocument(String title, String description, MultipartFile file) throws IOException {
         User currentUser = getCurrentUser();
 
-        // Verify that the user belongs to a department before proceeding.
         Department userDepartment = currentUser.getDepartment();
         if (Objects.isNull(userDepartment)) {
             throw new IllegalStateException("Cannot upload document: User '" + currentUser.getUsername() + "' is not assigned to a department.");
         }
-
 
         String s3ObjectKey = buildS3Key(userDepartment.getId(), file.getOriginalFilename());
 
         fileStorageService.uploadFile(s3ObjectKey, file);
 
         Document document = new Document();
+        document.setTitle(title);
+        document.setDescription(description);
         document.setOriginalFileName(file.getOriginalFilename());
         document.setDepartment(userDepartment);
 
@@ -74,7 +74,7 @@ public class DocumentService {
         return mapToDocumentResponseDto(savedDocument);
     }
 
-    // --- NEW METHOD: UPLOAD NEW VERSION ---
+
     @Transactional
     public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file) throws IOException {
         User currentUser = getCurrentUser();
@@ -132,7 +132,7 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 
-    // --- NEW METHOD: Get a single document's details ---
+    // ---  METHOD: Get a single document's details ---
     public DocumentResponseDto getDocumentById(Long documentId) {
         User currentUser = getCurrentUser();
         Document document = documentRepository.findById(documentId)
@@ -208,6 +208,8 @@ public class DocumentService {
     private DocumentResponseDto mapToDocumentResponseDto(Document doc) {
         return DocumentResponseDto.builder()
                 .id(doc.getId())
+                .title(doc.getTitle())
+                .description(doc.getDescription())
                 .fileName(doc.getOriginalFileName())
                 .latestVersion(mapToDocumentVersionDto(doc.getLatestVersion()))
                 .versionHistory(doc.getVersions().stream()

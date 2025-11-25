@@ -8,6 +8,8 @@ import java.util.List;
 @Builder
 public class DocumentResponseDto {
     private Long id;
+    private String title;
+    private String description;
     private String fileName;
     private DocumentVersionDto latestVersion;
     private List<DocumentVersionDto> versionHistory;

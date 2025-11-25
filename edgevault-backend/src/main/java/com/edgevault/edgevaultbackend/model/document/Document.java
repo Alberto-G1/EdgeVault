@@ -22,15 +22,26 @@ public class Document {
     private Long id;
 
     @Column(nullable = false)
+    private String title;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(nullable = false)
     private String originalFileName;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // Use optional = false
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "department_id")
     private Department department;
 
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("versionNumber DESC")
     private List<DocumentVersion> versions = new ArrayList<>();
+
+    @OneToOne
+    @JoinColumn(name = "latest_version_id")
+    private DocumentVersion latestVersion;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -41,11 +52,4 @@ public class Document {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deletion_requester_id")
     private User deletionRequester;
-    // It's good practice to make the latest version optional=true initially
-    // as it can only be set *after* the first version is created.
-    // However, for simplicity and because we do it in one transaction, we can leave it.
-    // Let's remove the constraint for now to avoid potential transient state issues.
-    @OneToOne
-    @JoinColumn(name = "latest_version_id")
-    private DocumentVersion latestVersion;
 }
