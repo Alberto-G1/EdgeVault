@@ -40,14 +40,12 @@ public class DocumentController {
         return ResponseEntity.ok(documents);
     }
 
-    // --- NEW ENDPOINT ---
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     public ResponseEntity<DocumentResponseDto> getDocumentDetails(@PathVariable Long id) {
         return ResponseEntity.ok(documentService.getDocumentById(id));
     }
 
-    // --- NEW ENDPOINT ---
     @GetMapping("/versions/{versionId}/download")
     @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     public ResponseEntity<InputStreamResource> downloadVersion(@PathVariable Long versionId) {
@@ -62,11 +60,23 @@ public class DocumentController {
                 .body(new InputStreamResource((InputStreamSource) downloadedFile.resource()));
     }
 
-    // --- NEW ENDPOINT ---
     @DeleteMapping("/{id}/request-deletion")
     @PreAuthorize("hasAuthority('DOCUMENT_DELETE')")
     public ResponseEntity<Void> requestDeletion(@PathVariable Long id) {
         documentService.requestDocumentDeletion(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{documentId}/versions")
+    @PreAuthorize("hasAuthority('DOCUMENT_UPDATE')")
+    public ResponseEntity<DocumentResponseDto> uploadNewVersion(
+            @PathVariable Long documentId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            DocumentResponseDto response = documentService.uploadNewVersion(documentId, file);
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
