@@ -23,12 +23,14 @@ public class DocumentController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('DOCUMENT_CREATE')")
-    public ResponseEntity<DocumentResponseDto> uploadDocument(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<DocumentResponseDto> uploadDocument(
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("file") MultipartFile file) {
         try {
-            DocumentResponseDto response = documentService.uploadNewDocument(file);
+            DocumentResponseDto response = documentService.uploadNewDocument(title, description, file);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IOException e) {
-            // In a real app, log the error
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

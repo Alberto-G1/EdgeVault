@@ -7,8 +7,10 @@ import type { Document } from '../types/document';
  * @param file The file object to upload.
  * @returns A promise that resolves to the newly created document's metadata.
  */
-export const uploadDocument = async (file: File): Promise<Document> => {
+export const uploadDocument = async (title: string, description: string, file: File): Promise<Document> => {
     const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
     formData.append('file', file);
 
     const response = await apiClient.post<Document>('/documents', formData, {

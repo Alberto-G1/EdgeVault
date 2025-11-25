@@ -12,14 +12,16 @@ const DocumentManagementPage: React.FC = () => {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
     
-    // State for confirmation modal
+    // State for upload form
+    const [uploadTitle, setUploadTitle] = useState('');
+    const [uploadDescription, setUploadDescription] = useState('');
+    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+
+    const [isUploading, setIsUploading] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-
     const { hasPermission } = usePermissions();
     const navigate = useNavigate();
 
@@ -39,27 +41,41 @@ const DocumentManagementPage: React.FC = () => {
         fetchDocuments();
     }, []);
 
+    const resetUploadForm = () => {
+        setUploadTitle('');
+        setUploadDescription('');
+        setFileToUpload(null);
+    };
+
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFileToUpload(e.target.files[0]);
+            const file = e.target.files[0];
+            setFileToUpload(file);
+            // Pre-fill title with filename (without extension) if title is empty
+            if (uploadTitle === '') {
+                const fileName = file.name;
+                const lastDot = fileName.lastIndexOf('.');
+                const baseName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
+                setUploadTitle(baseName);
+            }
         }
     };
 
     const handleUpload = async () => {
-        if (!fileToUpload) {
-            toast.error("Please select a file to upload.");
+        if (!fileToUpload || !uploadTitle.trim()) {
+            toast.error("A title and a file are required to upload.");
             return;
         }
         setIsUploading(true);
         try {
-            await toast.promise(uploadDocument(fileToUpload), {
+            await toast.promise(uploadDocument(uploadTitle, uploadDescription, fileToUpload), {
                 loading: 'Uploading document...',
                 success: 'Document uploaded successfully!',
                 error: (err) => err.response?.data?.message || 'Upload failed.',
             });
             setIsUploadModalOpen(false);
-            setFileToUpload(null);
-            fetchDocuments(); // Refresh list
+            resetUploadForm();
+            fetchDocuments();
         } catch (error) {
             console.error(error);
         } finally {
@@ -136,7 +152,7 @@ const DocumentManagementPage: React.FC = () => {
                             <div className="flex-grow">
                                 <FileText size={40} className="text-cyan-500 mb-2"/>
                                 <h3 className="font-bold text-gray-800 dark:text-gray-100 break-words group-hover:text-cyan-500 transition-colors">
-                                    {doc.fileName}
+                                    {doc.title}
                                 </h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     Version: {doc.latestVersion.versionNumber}
@@ -157,27 +173,30 @@ const DocumentManagementPage: React.FC = () => {
                 </div>
             )}
             
-            <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload New Document">
+            <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); resetUploadForm(); }} title="Upload New Document">
                 <div className="space-y-4">
                     <div>
-                        <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <Upload size={32} className="text-gray-400"/>
-                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <input id="file-upload" type="file" onChange={handleFileSelect} className="hidden" />
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Document Title</label>
+                        <input type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="mt-1 input-style" required />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
+                        <textarea value={uploadDescription} onChange={(e) => setUploadDescription(e.target.value)} rows={3} className="mt-1 input-style" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">File</label>
+                        <input type="file" onChange={handleFileSelect} className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" required />
+                    </div>
+                    
                     {fileToUpload && (
                         <p className="text-sm text-center font-medium text-gray-700 dark:text-gray-300">
                             Selected file: <span className="text-cyan-600">{fileToUpload.name}</span>
                         </p>
                     )}
+
                     <div className="flex justify-end pt-4">
-                        <button onClick={() => setIsUploadModalOpen(false)} type="button" className="btn-secondary mr-3">
-                            Cancel
-                        </button>
-                        <button onClick={handleUpload} disabled={isUploading || !fileToUpload} className="btn-primary">
+                         <button onClick={() => { setIsUploadModalOpen(false); resetUploadForm(); }} type="button" className="btn-secondary mr-3">Cancel</button>
+                        <button onClick={handleUpload} disabled={isUploading || !fileToUpload || !uploadTitle.trim()} className="btn-primary">
                             {isUploading ? 'Uploading...' : 'Upload'}
                         </button>
                     </div>
