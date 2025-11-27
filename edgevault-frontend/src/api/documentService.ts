@@ -75,3 +75,17 @@ export const downloadDocumentVersion = async (versionId: number): Promise<{data:
     
     return { data: response.data, filename };
 };
+
+
+export const getPendingDeletions = async (): Promise<DocumentApproval[]> => {
+    const response = await apiClient.get<DocumentApproval[]>('/documents/pending-deletion');
+    return response.data;
+};
+
+export const approveDeletion = async (id: number): Promise<void> => {
+    await apiClient.post(`/documents/${id}/approve-deletion`);
+};
+
+export const rejectDeletion = async (id: number): Promise<void> => {
+    await apiClient.post(`/documents/${id}/reject-deletion`);
+};

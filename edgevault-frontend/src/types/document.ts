@@ -14,3 +14,12 @@ export interface Document {
     latestVersion: DocumentVersion;
     versionHistory: DocumentVersion[];
 }
+
+
+export interface DocumentApproval {
+    documentId: number;
+    title: string;
+    requesterUsername: string;
+    departmentName: string;
+    requestedAt: string;
+}

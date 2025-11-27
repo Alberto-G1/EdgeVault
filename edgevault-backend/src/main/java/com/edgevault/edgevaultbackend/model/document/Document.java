@@ -2,6 +2,7 @@ package com.edgevault.edgevaultbackend.model.document;
 
 import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +38,7 @@ public class Document {
 
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("versionNumber DESC")
+    @JsonManagedReference // This is the "parent" side
     private List<DocumentVersion> versions = new ArrayList<>();
 
     @OneToOne

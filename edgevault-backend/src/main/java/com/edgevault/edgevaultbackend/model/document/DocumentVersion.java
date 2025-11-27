@@ -1,6 +1,7 @@
 package com.edgevault.edgevaultbackend.model.document;
 
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,9 +18,9 @@ public class DocumentVersion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- THIS IS THE FIX ---
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // Use optional = false
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "document_id")
+    @JsonBackReference // This is the "child" side, it won't be serialized
     private Document document;
 
     @Column(nullable = false)
