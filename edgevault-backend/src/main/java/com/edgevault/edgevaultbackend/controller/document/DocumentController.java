@@ -1,5 +1,6 @@
 package com.edgevault.edgevaultbackend.controller.document;
 
+import com.edgevault.edgevaultbackend.dto.document.DocumentApprovalDto;
 import com.edgevault.edgevaultbackend.dto.document.DocumentResponseDto;
 import com.edgevault.edgevaultbackend.service.document.DocumentService;
 import lombok.RequiredArgsConstructor;
@@ -80,5 +81,27 @@ public class DocumentController {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // --- ENDPOINTS for APPROVAL WORKFLOW ---
+
+    @GetMapping("/pending-deletion")
+    @PreAuthorize("hasAuthority('DOCUMENT_APPROVAL')")
+    public ResponseEntity<List<DocumentApprovalDto>> getPendingDeletionDocuments() {
+        return ResponseEntity.ok(documentService.getPendingDeletionDocuments());
+    }
+
+    @PostMapping("/{id}/approve-deletion")
+    @PreAuthorize("hasAuthority('DOCUMENT_APPROVAL')")
+    public ResponseEntity<Void> approveDeletion(@PathVariable Long id) {
+        documentService.approveDeletion(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reject-deletion")
+    @PreAuthorize("hasAuthority('DOCUMENT_APPROVAL')")
+    public ResponseEntity<Void> rejectDeletion(@PathVariable Long id) {
+        documentService.rejectDeletion(id);
+        return ResponseEntity.noContent().build();
     }
 }

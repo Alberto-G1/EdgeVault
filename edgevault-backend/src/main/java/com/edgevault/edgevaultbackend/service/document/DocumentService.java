@@ -1,5 +1,6 @@
 package com.edgevault.edgevaultbackend.service.document;
 
+import com.edgevault.edgevaultbackend.dto.document.DocumentApprovalDto;
 import com.edgevault.edgevaultbackend.dto.document.DocumentResponseDto;
 import com.edgevault.edgevaultbackend.dto.document.DocumentVersionDto;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
@@ -125,8 +126,8 @@ public class DocumentService {
             return Collections.emptyList();
         }
 
-        // --- FILTER BY ACTIVE STATUS ---
-        return documentRepository.findByDepartmentId(userDepartment.getId()).stream()
+        // --- USE THE NEW, EFFICIENT QUERY ---
+        return documentRepository.findAllByDepartmentIdWithDetails(userDepartment.getId()).stream()
                 .filter(doc -> doc.getStatus() == DocumentStatus.ACTIVE)
                 .map(this::mapToDocumentResponseDto)
                 .collect(Collectors.toList());
@@ -188,6 +189,55 @@ public class DocumentService {
 
         documentRepository.save(document);
     }
+
+    // --- METHOD: Get all documents pending deletion ---
+    public List<DocumentApprovalDto> getPendingDeletionDocuments() {
+        // This now calls the efficient, custom query that directly returns the DTOs
+        return documentRepository.findDocumentsPendingDeletion();
+    }
+
+    // --- METHOD: Approve a deletion request ---
+    @Transactional
+    public void approveDeletion(Long documentId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
+
+        if (document.getStatus() != DocumentStatus.PENDING_DELETION) {
+            throw new IllegalStateException("Document is not pending deletion.");
+        }
+
+        // Set status to ARCHIVED. A future process could permanently delete these.
+        document.setStatus(DocumentStatus.ARCHIVED);
+        documentRepository.save(document);
+    }
+
+    // --- METHOD: Reject a deletion request ---
+    @Transactional
+    public void rejectDeletion(Long documentId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
+
+        if (document.getStatus() != DocumentStatus.PENDING_DELETION) {
+            throw new IllegalStateException("Document is not pending deletion.");
+        }
+
+        // Revert status to ACTIVE and clear deletion fields
+        document.setStatus(DocumentStatus.ACTIVE);
+        document.setDeletionRequester(null);
+        document.setDeletionRequestedAt(null);
+        documentRepository.save(document);
+    }
+
+    private DocumentApprovalDto mapToDocumentApprovalDto(Document doc) {
+        return DocumentApprovalDto.builder()
+                .documentId(doc.getId())
+                .title(doc.getTitle())
+                .requesterUsername(doc.getDeletionRequester() != null ? doc.getDeletionRequester().getUsername() : "N/A")
+                .departmentName(doc.getDepartment() != null ? doc.getDepartment().getName() : "N/A")
+                .requestedAt(doc.getDeletionRequestedAt())
+                .build();
+    }
+
 
     // The record now correctly expects a Spring Framework Resource, not a Jakarta one.
     public record DownloadedFile(String filename, Resource resource, String contentType) {}

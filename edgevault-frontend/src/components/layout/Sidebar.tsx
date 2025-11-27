@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Shield, Building, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 
 const Sidebar: React.FC = () => {
@@ -58,6 +58,15 @@ const Sidebar: React.FC = () => {
                     >
                         <FileText className="w-5 h-5 mr-3" />
                         Documents
+                    </NavLink>
+                )}
+                {hasAnyPermission(['DOCUMENT_APPROVAL']) && (
+                    <NavLink
+                        to="/admin/approvals"
+                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    >
+                        <ClipboardCheck className="w-5 h-5 mr-3" />
+                        Approval Queue
                     </NavLink>
                 )}
             </nav>

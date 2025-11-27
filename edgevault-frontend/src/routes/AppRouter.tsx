@@ -11,6 +11,7 @@ import ProfilePage from '../pages/admin/ProfilePage';
 import ProfileEditPage from '../pages/admin/ProfileEditPage';
 import DocumentManagementPage from '../pages/admin/DocumentManagementPage';
 import DocumentDetailPage from '../pages/admin/DocumentDetailPage';
+import ApprovalQueuePage from '../pages/admin/ApprovalQueuePage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -30,6 +31,7 @@ const AppRouter: React.FC = () => {
                 <Route path="profile/edit" element={<ProfileEditPage />} /> 
                 <Route path="documents" element={<DocumentManagementPage />} /> 
                 <Route path="documents/:id" element={<DocumentDetailPage />} />
+                <Route path="approvals" element={<ApprovalQueuePage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/login" />} />
