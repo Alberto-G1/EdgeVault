@@ -1,34 +1,37 @@
 import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import ThemeToggleButton from '../common/ThemeToggleButton';
-import { Link } from 'react-router-dom'; // <-- IMPORT Link
+import SearchBar from '../common/SearchBar'; // <-- IMPORT
+import { Link } from 'react-router-dom';
 import { User } from 'lucide-react';
-const Header: React.FC = () => {
-const { user, logout } = useAuth();
 
-return (
-    <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-md transition-colors duration-300">
-        <div>
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-                Welcome, {user?.sub || 'Admin'}!
-            </h2>
-        </div>
-        <div className="flex items-center space-x-4">
-            <ThemeToggleButton />
-            {/* --- ADDED PROFILE LINK --- */}
-            <Link to="/admin/profile" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
-                <User size={20} />
-            </Link>
-            {/* --------------------------- */}
-            <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-            >
-                Logout
-            </button>
-        </div>
-    </header>
-    
-);
+const Header: React.FC = () => {
+    const { user, logout } = useAuth();
+
+    return (
+        <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-md transition-colors duration-300">
+            {/* --- SEARCH BAR --- */}
+            <div>
+                <SearchBar />
+            </div>
+
+            <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Welcome, {user?.sub || 'Admin'}!
+                </span>
+                <ThemeToggleButton />
+                <Link to="/admin/profile" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <User size={20} />
+                </Link>
+                <button
+                    onClick={logout}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                >
+                    Logout
+                </button>
+            </div>
+        </header>
+    );
 };
+
 export default Header;

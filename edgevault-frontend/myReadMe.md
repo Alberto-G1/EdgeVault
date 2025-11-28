@@ -59,3 +59,12 @@ To completely delete the container (if you want to start fresh):
 First, stop it: docker stop edgevault-minio
 Then, remove it: docker rm edgevault-minio
 After removing it, you can use the original docker run ... command to create a new one.
+
+
+Step 2: Configure Elasticsearch Connection
+We will use a Docker container for our local Elasticsearch instance.
+Start Elasticsearch with Docker: Open a terminal and run the following command. This will start a single-node Elasticsearch cluster.
+code
+Bash
+docker run -p 9200:9200 -p 9300:9300 --name edgevault-es -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+Note: The first run will download the image, which may take a few minutes. xpack.security.enabled=false is crucial for local development to disable authentication.
