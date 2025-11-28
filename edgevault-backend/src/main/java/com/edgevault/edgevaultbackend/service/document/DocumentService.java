@@ -13,6 +13,7 @@ import com.edgevault.edgevaultbackend.repository.document.DocumentRepository;
 import com.edgevault.edgevaultbackend.repository.document.DocumentVersionRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import com.edgevault.edgevaultbackend.service.storage.FileStorageService;
+import com.edgevault.edgevaultbackend.service.search.SearchService;
 import org.springframework.core.io.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
@@ -39,6 +40,7 @@ public class DocumentService {
     private final UserRepository userRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final FileStorageService fileStorageService;
+    private final SearchService searchService;
 
     @Transactional
     public DocumentResponseDto uploadNewDocument(String title, String description, MultipartFile file) throws IOException {
@@ -72,6 +74,10 @@ public class DocumentService {
         document.setLatestVersion(version);
 
         Document savedDocument = documentRepository.save(document);
+
+        // --- INDEX THE DOCUMENT IN ELASTICSEARCH ---
+        searchService.indexDocument(version, file);
+
         return mapToDocumentResponseDto(savedDocument);
     }
 
@@ -114,6 +120,9 @@ public class DocumentService {
 
         // Save the parent document. Cascade will save the new version.
         Document updatedDocument = documentRepository.save(document);
+
+        // --- NEW: INDEX THE NEW VERSION ---
+        searchService.indexDocument(newVersion, file);
 
         return mapToDocumentResponseDto(updatedDocument);
     }
