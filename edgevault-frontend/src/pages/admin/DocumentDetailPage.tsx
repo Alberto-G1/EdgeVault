@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { FileClock, Download, ArrowLeft, Upload } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import Modal from '../../components/common/Modal';
+import DocumentChat from '../../components/document/DocumentChat'; 
 
 const DocumentDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -138,6 +139,30 @@ const DocumentDetailPage: React.FC = () => {
                         </li>
                     ))}
                 </ul>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+                {/* Left Column for Details */}
+                <div className="lg:col-span-2 space-y-6">
+                    {document.description && (
+                        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Description</h2>
+                            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{document.description}</p>
+                        </div>
+                    )}
+                    
+                    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-200"><FileClock className="mr-2"/> Version History</h2>
+                        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {/* ... version history mapping is unchanged ... */}
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Right Column for Chat */}
+                <div className="lg:col-span-1">
+                    <DocumentChat documentId={document.id} />
+                </div>
             </div>
             
             <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload New Version">
