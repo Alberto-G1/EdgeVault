@@ -123,8 +123,11 @@
             <artifactId>pdfbox</artifactId>
             <version>2.0.30</version> <!-- A stable and widely used version -->
         </dependency>
-
-
+        <!-- Spring Boot WebSocket Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
