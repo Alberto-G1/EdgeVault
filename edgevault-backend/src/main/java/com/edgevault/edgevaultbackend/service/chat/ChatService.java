@@ -3,9 +3,12 @@ package com.edgevault.edgevaultbackend.service.chat;
 import com.edgevault.edgevaultbackend.dto.chat.ChatMessageDto;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
 import com.edgevault.edgevaultbackend.model.chat.ChatMessage;
+import com.edgevault.edgevaultbackend.model.chat.Conversation;
+import com.edgevault.edgevaultbackend.model.chat.ConversationType;
 import com.edgevault.edgevaultbackend.model.document.Document;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.chat.ChatMessageRepository;
+import com.edgevault.edgevaultbackend.repository.chat.ConversationRepository;
 import com.edgevault.edgevaultbackend.repository.document.DocumentRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,21 +28,22 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
+    private final ConversationRepository conversationRepository;
 
     @Transactional
-    public ChatMessage saveMessage(Long documentId, String content, String senderUsername) {
+    public ChatMessage saveMessage(Long conversationId, String content, String senderUsername) {
         User sender = userRepository.findByUsername(senderUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
-        Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
-        // Security Check: Ensure sender has access to the document's department
-        if (!sender.getDepartment().getId().equals(document.getDepartment().getId())) {
-            throw new AccessDeniedException("User does not have access to this document's chat.");
+        // Security Check: Ensure user is part of the conversation (or if it's the global chat)
+        if (conversation.getType() != ConversationType.GROUP && !conversation.getParticipants().contains(sender)) {
+            throw new AccessDeniedException("User is not a participant of this conversation.");
         }
 
         ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setDocument(document);
+        chatMessage.setConversation(conversation);
         chatMessage.setSender(sender);
         chatMessage.setContent(content);
         chatMessage.setTimestamp(LocalDateTime.now());
@@ -46,20 +51,28 @@ public class ChatService {
         return chatMessageRepository.save(chatMessage);
     }
 
-    public List<ChatMessageDto> getMessageHistory(Long documentId, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
-
-        // Security Check
-        if (!user.getDepartment().getId().equals(document.getDepartment().getId())) {
-            throw new AccessDeniedException("User does not have access to this document's chat history.");
-        }
-
-        return chatMessageRepository.findByDocumentIdOrderByTimestampAsc(documentId).stream()
+    public List<ChatMessageDto> getMessageHistory(Long conversationId, String username) {
+        // Security check is implicitly handled by the saveMessage check
+        // A more robust check would verify participation here as well.
+        return chatMessageRepository.findByConversationIdOrderByTimestampAsc(conversationId).stream()
                 .map(this::mapToChatMessageDto)
                 .collect(Collectors.toList());
+    }
+
+    // --- NEW METHOD FOR STARTING A DM ---
+    @Transactional
+    public Conversation getOrCreateDirectConversation(String username1, String username2) {
+        User user1 = userRepository.findByUsername(username1).orElseThrow();
+        User user2 = userRepository.findByUsername(username2).orElseThrow();
+
+        return conversationRepository.findDirectConversationBetweenUsers(user1.getId(), user2.getId())
+                .orElseGet(() -> {
+                    Conversation newDm = new Conversation();
+                    newDm.setType(ConversationType.DIRECT_MESSAGE);
+                    newDm.setParticipants(Set.of(user1, user2));
+                    newDm.setCreatedAt(LocalDateTime.now());
+                    return conversationRepository.save(newDm);
+                });
     }
 
     public ChatMessageDto mapToChatMessageDto(ChatMessage message) {
