@@ -78,7 +78,7 @@ public class ChatService {
     public ChatMessageDto mapToChatMessageDto(ChatMessage message) {
         return ChatMessageDto.builder()
                 .id(message.getId())
-                .documentId(message.getDocument().getId())
+                .conversationId(message.getConversation().getId())
                 .senderUsername(message.getSender().getUsername())
                 .senderProfilePictureUrl(message.getSender().getProfilePictureUrl())
                 .content(message.getContent())
