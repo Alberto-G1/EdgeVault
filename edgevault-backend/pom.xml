@@ -28,6 +28,10 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+
+        <!-- Align the Elasticsearch client version with our Docker container version -->
+        <elasticsearch.version>8.11.1</elasticsearch.version>
+
     </properties>
     <dependencyManagement>
         <dependencies>

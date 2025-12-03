@@ -1,5 +1,7 @@
 package com.edgevault.edgevaultbackend.config;
 
+import com.edgevault.edgevaultbackend.model.chat.Conversation;
+import com.edgevault.edgevaultbackend.model.chat.ConversationType;
 import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.permission.Permission;
 import com.edgevault.edgevaultbackend.model.role.Role;
@@ -34,7 +36,7 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
     private final DepartmentRepository departmentRepository;
     private final ConversationRepository conversationRepository;
 
-    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, DepartmentRepository departmentRepository) {
+    public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, DepartmentRepository departmentRepository, ConversationRepository conversationRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;

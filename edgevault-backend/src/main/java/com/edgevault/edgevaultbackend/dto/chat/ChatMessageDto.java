@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ChatMessageDto {
     private Long id;
-    private Long documentId;
+    private Long conversationId;
     private String senderUsername;
-    private String senderProfilePictureUrl; // For the UI
+    private String senderProfilePictureUrl;
     private String content;
     private LocalDateTime timestamp;
 }
