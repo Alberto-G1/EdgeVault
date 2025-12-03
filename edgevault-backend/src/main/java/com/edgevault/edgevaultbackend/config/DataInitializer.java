@@ -4,6 +4,7 @@ import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.permission.Permission;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.edgevault.edgevaultbackend.repository.chat.ConversationRepository;
 import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
 import com.edgevault.edgevaultbackend.repository.permission.PermissionRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +32,7 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
     private final DepartmentRepository departmentRepository;
+    private final ConversationRepository conversationRepository;
 
     public DataInitializer(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, DepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
@@ -37,6 +40,7 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
         this.departmentRepository = departmentRepository;
+        this.conversationRepository = conversationRepository;
     }
 
     @Override
@@ -131,6 +135,19 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
             userRepository.save(adminUser);
             System.out.println("Created SUPER_ADMIN user: Administrator");
         }
+
+        // --- SEED GLOBAL CHAT CONVERSATION ---
+        conversationRepository.findByName("Global Chat").or(() -> {
+            System.out.println("Creating Global Chat conversation.");
+            Conversation globalChat = new Conversation();
+            globalChat.setName("Global Chat");
+            globalChat.setType(ConversationType.GROUP);
+            globalChat.setCreatedAt(LocalDateTime.now());
+            // In a real app, you might add all users to this group here
+            conversationRepository.save(globalChat);
+            return Optional.of(globalChat);
+        });
+        // ------------------------------------
 
         System.out.println("Data initialization finished.");
 

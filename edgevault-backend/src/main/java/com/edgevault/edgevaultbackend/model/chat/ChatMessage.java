@@ -1,12 +1,10 @@
 package com.edgevault.edgevaultbackend.model.chat;
 
-import com.edgevault.edgevaultbackend.model.document.Document;
 import com.edgevault.edgevaultbackend.model.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,8 +19,8 @@ public class ChatMessage {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "document_id")
-    private Document document;
+    @JoinColumn(name = "conversation_id")
+    private Conversation conversation;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sender_id")

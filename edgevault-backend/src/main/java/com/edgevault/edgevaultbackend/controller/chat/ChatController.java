@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.controller.chat;
 import com.edgevault.edgevaultbackend.dto.chat.ChatMessageDto;
 import com.edgevault.edgevaultbackend.dto.chat.NewChatMessageRequest;
 import com.edgevault.edgevaultbackend.model.chat.ChatMessage;
+import com.edgevault.edgevaultbackend.model.chat.Conversation;
 import com.edgevault.edgevaultbackend.service.chat.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.List;
@@ -25,37 +28,33 @@ public class ChatController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    /**
-     * Handles new chat messages sent over WebSocket.
-     * Clients send messages to "/app/chat/{documentId}".
-     * The server broadcasts the saved message to "/topic/chat/{documentId}".
-     */
-    @MessageMapping("/chat/{documentId}")
+    @MessageMapping("/chat/{conversationId}")
     public void sendMessage(
-            @DestinationVariable Long documentId,
+            @DestinationVariable Long conversationId,
             @Payload NewChatMessageRequest chatMessageRequest,
             Principal principal) {
 
-        // Save the message to the database
-        ChatMessage savedMessage = chatService.saveMessage(documentId, chatMessageRequest.getContent(), principal.getName());
-
-        // Convert to DTO to broadcast
+        ChatMessage savedMessage = chatService.saveMessage(conversationId, chatMessageRequest.getContent(), principal.getName());
         ChatMessageDto messageDto = chatService.mapToChatMessageDto(savedMessage);
 
-        // Broadcast the new message to all subscribers of this document's chat topic
-        messagingTemplate.convertAndSend("/topic/chat/" + documentId, messageDto);
+        messagingTemplate.convertAndSend("/topic/chat/" + conversationId, messageDto);
     }
 
-    /**
-     * An HTTP endpoint to fetch the chat history for a document.
-     * This is called once when the client first loads the chat.
-     */
-    @GetMapping("/api/v1/documents/{documentId}/chat-history")
+    @GetMapping("/api/v1/conversations/{conversationId}/history")
     public ResponseEntity<List<ChatMessageDto>> getChatHistory(
-            @PathVariable Long documentId,
+            @PathVariable Long conversationId,
             Authentication authentication) {
 
-        List<ChatMessageDto> history = chatService.getMessageHistory(documentId, authentication.getName());
+        List<ChatMessageDto> history = chatService.getMessageHistory(conversationId, authentication.getName());
         return ResponseEntity.ok(history);
+    }
+
+    @PostMapping("/api/v1/conversations/dm")
+    public ResponseEntity<Conversation> startDirectMessage(
+            @RequestParam String withUser,
+            Authentication authentication) {
+
+        Conversation conversation = chatService.getOrCreateDirectConversation(authentication.getName(), withUser);
+        return ResponseEntity.ok(conversation);
     }
 }
