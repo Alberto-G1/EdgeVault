@@ -13,6 +13,7 @@ import DocumentManagementPage from '../pages/admin/DocumentManagementPage';
 import DocumentDetailPage from '../pages/admin/DocumentDetailPage';
 import ApprovalQueuePage from '../pages/admin/ApprovalQueuePage';
 import SearchPage from '../pages/admin/SearchPage';
+import ChatPage from '../pages/admin/ChatPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -34,6 +35,8 @@ const AppRouter: React.FC = () => {
                 <Route path="documents/:id" element={<DocumentDetailPage />} />
                 <Route path="approvals" element={<ApprovalQueuePage />} />
                 <Route path="search" element={<SearchPage />} />
+                <Route path="chat" element={<ChatPage />} /> {/* <-- ADD ROUTE */}
+                <Route path="chat/:conversationId" element={<ChatPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/login" />} />
