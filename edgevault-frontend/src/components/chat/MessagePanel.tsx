@@ -15,44 +15,53 @@ interface MessagePanelProps {
 const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
-    const { user } = useAuth();
+    const [loadingHistory, setLoadingHistory] = useState(true);
+    const { user, token } = useAuth();
     const stompClientRef = useRef<Client | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        // Fetch initial chat history when conversationId changes
+        // Clear messages and set loading when the conversation changes
+        setMessages([]);
+        setLoadingHistory(true);
+
         const fetchHistory = async () => {
             try {
                 const history = await getChatHistory(conversationId);
                 setMessages(history);
             } catch (error) {
                 toast.error("Could not load chat history.");
-                setMessages([]); // Clear messages on error
+            } finally {
+                setLoadingHistory(false);
             }
         };
         fetchHistory();
 
+        const socketFactory = () => new SockJS(`http://localhost:8082/ws?token=${token}`);
+        
         const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
+            webSocketFactory: socketFactory,
+            reconnectDelay: 5000,
             onConnect: () => {
-                console.log(`Connected to WebSocket for conversation ${conversationId}`);
+                console.log(`STOMP client connected for conversation ${conversationId}`);
                 client.subscribe(`/topic/chat/${conversationId}`, (message) => {
                     const receivedMessage = JSON.parse(message.body) as ChatMessage;
                     setMessages((prevMessages) => [...prevMessages, receivedMessage]);
                 });
             },
-            onStompError: (frame) => { console.error('Broker reported error: ' + frame.headers['message']); },
+            onStompError: (frame) => { console.error('STOMP Error:', frame); },
         });
 
         stompClientRef.current = client;
         client.activate();
 
-        // Cleanup on component unmount or when conversationId changes
         return () => {
-            console.log(`Deactivating client for conversation ${conversationId}`);
-            client.deactivate();
+            if (client) {
+                client.deactivate();
+                console.log(`STOMP client deactivated for conversation ${conversationId}`);
+            }
         };
-    }, [conversationId]);
+    }, [conversationId, token]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,8 +75,14 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
                 body: JSON.stringify({ content: newMessage }),
             });
             setNewMessage('');
+        } else {
+            toast.error("Cannot send message. Not connected to chat server.");
         }
     };
+
+    if (loadingHistory) {
+        return <div className="flex-grow flex items-center justify-center text-gray-500">Loading messages...</div>;
+    }
 
     return (
         <div className="bg-white dark:bg-gray-800 flex flex-col h-full">
