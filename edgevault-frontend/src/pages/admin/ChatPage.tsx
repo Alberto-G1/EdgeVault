@@ -1,42 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams } from 'react-router-dom';
 import ChatSidebar from '../../components/chat/ChatSidebar';
 import MessagePanel from '../../components/chat/MessagePanel';
-import apiClient from '../../api/axiosConfig';
-import { toast } from 'react-hot-toast';
+import { MessageSquare } from 'lucide-react';
 
 const ChatPage: React.FC = () => {
-    // This component now acts as a controller to manage which conversation is active.
-    const { conversationId, username } = useParams<{ conversationId?: string, username?: string }>();
-    const navigate = useNavigate();
-    const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-    const [loadingConversation, setLoadingConversation] = useState(false);
-    
-    useEffect(() => {
-        const resolveConversation = async () => {
-            if (username) { // This is a request for a Direct Message
-                setLoadingConversation(true);
-                try {
-                    // Call the backend to get or create a DM conversation
-                    const response = await apiClient.post(`/conversations/dm?withUser=${username}`);
-                    const conversation = response.data;
-                    // Navigate to the correct URL with the conversation ID, which will trigger the other effect
-                    navigate(`/admin/chat/${conversation.id}`, { replace: true });
-                } catch (error) {
-                    toast.error(`Could not start conversation with ${username}.`);
-                    navigate('/admin/chat');
-                } finally {
-                    setLoadingConversation(false);
-                }
-            } else if (conversationId) { // This is a direct link to a conversation
-                setActiveConversationId(Number(conversationId));
-            } else { // No conversation selected
-                setActiveConversationId(null);
-            }
-        };
-        resolveConversation();
-    }, [conversationId, username, navigate]);
-
+    // This component is now very simple. It just reads the ID from the URL.
+    const { conversationId } = useParams<{ conversationId?: string }>();
+    const activeConversationId = conversationId ? Number(conversationId) : null;
 
     return (
         <div className="flex h-[calc(100vh-100px)] bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
@@ -45,14 +16,12 @@ const ChatPage: React.FC = () => {
             </div>
 
             <div className="w-2/3 lg:w-3/4 flex flex-col">
-                 {loadingConversation ? (
-                    <div className="flex-grow flex items-center justify-center text-gray-500">
-                        <p>Starting conversation...</p>
-                    </div>
-                 ) : activeConversationId ? (
+                 {activeConversationId ? (
+                    // The key is essential to force MessagePanel to remount and re-connect when the ID changes
                     <MessagePanel key={activeConversationId} conversationId={activeConversationId} />
                  ) : (
-                    <div className="flex-grow flex items-center justify-center text-gray-500">
+                    <div className="flex-grow flex flex-col items-center justify-center text-gray-500 space-y-2">
+                        <MessageSquare size={48} />
                         <p>Select a conversation to start chatting.</p>
                     </div>
                 )}
