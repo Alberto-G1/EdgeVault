@@ -16,12 +16,13 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loadingHistory, setLoadingHistory] = useState(true);
-    const { user, token } = useAuth();
+    const { user, token } = useAuth(); // We need the token here
     const stompClientRef = useRef<Client | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        // Clear messages and set loading when the conversation changes
+        if (!token) return; // Don't try to connect without a token
+
         setMessages([]);
         setLoadingHistory(true);
 
@@ -37,10 +38,16 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
         };
         fetchHistory();
 
-        const socketFactory = () => new SockJS(`http://localhost:8082/ws?token=${token}`);
-        
+        // --- THIS IS THE DEFINITIVE FIX ---
         const client = new Client({
-            webSocketFactory: socketFactory,
+            webSocketFactory: () => new SockJS('http://localhost:8082/ws'), // URL does NOT need the token
+            
+            // Explicitly add the JWT token to the STOMP CONNECT frame headers.
+            connectHeaders: {
+                Authorization: `Bearer ${token}`,
+            },
+
+            debug: (str) => { console.log(new Date(), str); },
             reconnectDelay: 5000,
             onConnect: () => {
                 console.log(`STOMP client connected for conversation ${conversationId}`);
@@ -51,6 +58,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
             },
             onStompError: (frame) => { console.error('STOMP Error:', frame); },
         });
+        // ---------------------------------
 
         stompClientRef.current = client;
         client.activate();
@@ -61,7 +69,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
                 console.log(`STOMP client deactivated for conversation ${conversationId}`);
             }
         };
-    }, [conversationId, token]);
+    }, [conversationId, token]); // Effect now correctly depends on the token
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

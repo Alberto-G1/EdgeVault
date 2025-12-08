@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.service.user;
 import com.edgevault.edgevaultbackend.dto.user.CreateUserRequestDto;
 import com.edgevault.edgevaultbackend.dto.user.UpdateUserRequestDto;
 import com.edgevault.edgevaultbackend.dto.user.UserResponseDto;
+import com.edgevault.edgevaultbackend.dto.user.UserSummaryDto;
 import com.edgevault.edgevaultbackend.exception.DuplicateResourceException;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
 import com.edgevault.edgevaultbackend.model.role.Role;
@@ -123,5 +124,9 @@ public class UserService {
                         .collect(Collectors.toSet()))
                 .departmentName(user.getDepartment() != null ? user.getDepartment().getName() : "N/A")
                 .build();
+    }
+
+    public List<UserSummaryDto> getAllUserSummaries() {
+        return userRepository.findAllUserSummaries();
     }
 }
