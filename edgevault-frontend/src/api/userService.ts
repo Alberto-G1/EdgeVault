@@ -22,7 +22,7 @@ interface UpdateUserPayload {
 
 
 export const getAllUsers = async (): Promise<User[]> => {
-    const response = await apiClient.get<User[]>('/users');
+    const response = await apiClient.get<User[]>('/users/summaries');
     return response.data;
 };
 

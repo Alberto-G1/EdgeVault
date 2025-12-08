@@ -12,11 +12,11 @@ export interface Role {
 export interface User {
     id: number;
     username: string;
-    email: string;
-    enabled: boolean;
-    roles: Pick<Role, 'name'>[];
-    departmentName: string;
-    departmentId?: number; 
+    email?: string; 
+    enabled?: boolean;
+    roles?: Pick<Role, 'name'>[]; 
+    departmentName?: string;
+    profilePictureUrl?: string;
 }
 
 // This will now represent the full profile DTO from the backend

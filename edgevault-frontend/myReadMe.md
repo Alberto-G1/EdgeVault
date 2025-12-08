@@ -1,70 +1,84 @@
-# Action Plan: Running MinIO with Docker
+# EdgeVault - Local Development Setup & Run Instructions
 
-This guide explains how to properly start MinIO using Docker on Windows PowerShell.
-
----
-
-## 📌 Prerequisites
-- **Docker Desktop** installed on your machine.
-- **PowerShell** terminal.
+This guide provides a complete walkthrough for setting up and running the EdgeVault Enterprise Document Management System on a local development machine.
 
 ---
 
-## 🚀 Step 1: Start Docker Desktop
-1. Open **Docker Desktop** from your Start Menu.
-2. Wait until Docker fully initializes (the icon in the system tray should stop animating and become stable).
+## 📚 Table of Contents
+1. [Prerequisites](#-prerequisites)
+2. [Initial Project Setup (One-Time Only)](#-initial-project-setup-one-time-only)
+   - [Backend: Spring Boot](#-backend-spring-boot)
+   - [Frontend: React + Vite](#-frontend-react--vite)
+   - [Database: MySQL](#-database-mysql)
+3. [Running External Services with Docker](#-running-external-services-with-docker)
+   - [Starting Docker Desktop](#-starting-docker-desktop)
+   - [Creating the Docker Containers (First Time Only)](#-creating-the-docker-containers-first-time-only)
+     - [MinIO (S3 Object Store)](#minio-s3-object-store)
+     - [Elasticsearch (Search Index)](#elasticsearch-search-index)
+4. [Daily Development Workflow](#-daily-development-workflow)
+   - [Starting Services](#-starting-services)
+   - [Running the Application](#-running-the-application)
+   - [Stopping Services](#-stopping-services)
+5. [Docker Container Management](#-docker-container-management)
 
 ---
 
-## 🖥️ Step 2: Run MinIO in PowerShell
-After Docker is running:
+## 🔌 Prerequisites
 
-Run the following command in your PowerShell terminal:
+Before you begin, ensure you have the following software installed:
 
-```powershell
+- **Java JDK 17 or higher**
+- **IntelliJ IDEA** (Community or Ultimate)
+- **Node.js LTS version** (includes npm)
+- **Docker Desktop**
+- **A SQL client** (like DBeaver, MySQL Workbench, or the IntelliJ database tool)
+
+---
+
+## 🚀 Initial Project Setup (One-Time Only)
+
+Follow these steps when you are setting up the project for the first time.
+
+### ⚫ Backend: Spring Boot
+
+1.  **Open Project:** Open the `edgevault-backend` directory in IntelliJ IDEA.
+2.  **Load Maven Dependencies:** IntelliJ should automatically detect the `pom.xml` file. If a small "M" icon with a refresh symbol appears, click it. Alternatively, right-click the `pom.xml` file -> **Maven** -> **Reload project**. This will download all necessary Java libraries.
+
+### 🔵 Frontend: React + Vite
+
+1.  **Open Terminal:** Open a terminal (like PowerShell or Git Bash) and navigate into the `edgevault-frontend` directory.
+2.  **Install Dependencies:** Run the following command to download all necessary JavaScript libraries. This may take a few minutes.
+    ```bash
+    npm install
+    ```
+
+### 🐬 Database: MySQL
+
+1.  **Start MySQL:** Ensure your local MySQL server is running.
+2.  **Create Database:** Using your SQL client, connect to your MySQL instance and run the following command to create the application's database:
+    ```sql
+    CREATE DATABASE edgevault_db;
+    ```
+    *Note: The Spring Boot application is configured to create and update tables automatically, so you only need to create the empty database.*
+
+---
+
+## 🐳 Running External Services with Docker
+
+Our application depends on MinIO (for file storage) and Elasticsearch (for search). We will run both using Docker.
+
+### 1️⃣ Starting Docker Desktop
+
+- **Crucial First Step:** Before running any `docker` commands, **you must start the Docker Desktop application** from your Start Menu.
+- Wait until its icon in the system tray is stable and says "Docker Desktop is running." If you don't do this, all docker commands will fail with a "cannot find the file specified" error.
+
+### 2️⃣ Creating the Docker Containers (First Time Only)
+
+Run these commands **once** to download the images and create the persistent containers for our services.
+
+#### MinIO (S3 Object Store)
+
+Open a terminal and run this command. This creates a container named `edgevault-minio`.
+
+```bash
 docker run -p 9000:9000 -p 9001:9001 --name edgevault-minio -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" quay.io/minio/minio server /data --console-address ":9001"
-
-
-Start the Existing Container
-You don't need to create a new container; you just need to start the one that already exists.
-Open a PowerShell or Command Prompt terminal.
-Run the following command:
-code
-Bash
-docker start edgevault-minio
-That's it. This command will find the existing container named edgevault-minio and start it up with all the same settings (ports, environment variables, etc.) you used when you first created it.
-Action Plan
-Ensure Docker Desktop is running.
-In your terminal, run docker start edgevault-minio.
-You will see the name edgevault-minio printed in the terminal. The container is now running in the background.
-Verify it's working:
-Open your browser and navigate to the MinIO console at http://localhost:9001.
-You should be able to log in. Your edgevault-documents bucket will still be there.
-Restart your Spring Boot application. It will now be able to connect to the running MinIO container.
-How to Manage the Container in the Future
-Here are the basic commands you'll need:
-To start the container:
-code
-Bash
-docker start edgevault-minio
-To stop the container:
-code
-Bash
-docker stop edgevault-minio
-To view logs (if you start it in the background):
-code
-Bash
-docker logs -f edgevault-minio
-To completely delete the container (if you want to start fresh):
-First, stop it: docker stop edgevault-minio
-Then, remove it: docker rm edgevault-minio
-After removing it, you can use the original docker run ... command to create a new one.
-
-
-Step 2: Configure Elasticsearch Connection
-We will use a Docker container for our local Elasticsearch instance.
-Start Elasticsearch with Docker: Open a terminal and run the following command. This will start a single-node Elasticsearch cluster.
-code
-Bash
-docker run -p 9200:9200 -p 9300:9300 --name edgevault-es -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-Note: The first run will download the image, which may take a few minutes. xpack.security.enabled=false is crucial for local development to disable authentication.

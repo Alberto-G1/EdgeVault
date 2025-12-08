@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.controller.user;
 import com.edgevault.edgevaultbackend.dto.user.CreateUserRequestDto;
 import com.edgevault.edgevaultbackend.dto.user.UpdateUserRequestDto;
 import com.edgevault.edgevaultbackend.dto.user.UserResponseDto;
+import com.edgevault.edgevaultbackend.dto.user.UserSummaryDto;
 import com.edgevault.edgevaultbackend.service.user.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,12 @@ public class UserController {
     @PreAuthorize("hasAuthority('USER_READ')") // <-- UPDATED
     public ResponseEntity<List<UserResponseDto>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    // --- UNSECURED ENDPOINT FOR CHAT ---
+    @GetMapping("/summaries")
+    public ResponseEntity<List<UserSummaryDto>> getAllUserSummaries() {
+        return ResponseEntity.ok(userService.getAllUserSummaries());
     }
 
     @PostMapping
