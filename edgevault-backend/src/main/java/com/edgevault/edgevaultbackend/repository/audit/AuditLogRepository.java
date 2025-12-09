@@ -12,4 +12,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     // Custom query to find the single latest log entry
     Optional<AuditLog> findTopByOrderByIdDesc();
+
+    // --- COUNT METHOD ---
+    long countByAction(String action);
 }

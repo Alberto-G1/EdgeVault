@@ -2,6 +2,7 @@ package com.edgevault.edgevaultbackend.repository.document;
 
 import com.edgevault.edgevaultbackend.dto.document.DocumentApprovalDto; // <-- IMPORT
 import com.edgevault.edgevaultbackend.model.document.Document;
+import com.edgevault.edgevaultbackend.model.document.DocumentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -28,4 +29,6 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<DocumentApprovalDto> findDocumentsPendingDeletion();
 
     List<Document> findByDepartmentId(Long departmentId);
+
+    long countByStatus(DocumentStatus status);
 }
