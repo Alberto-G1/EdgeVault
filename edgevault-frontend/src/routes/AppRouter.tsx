@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import WelcomePage from '../pages/auth/WelcomePage';
 import LoginPage from '../pages/auth/LoginPage';
 import DashboardPage from '../pages/admin/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
@@ -19,6 +20,8 @@ import AuditLogPage from '../pages/admin/AuditLogPage';
 const AppRouter: React.FC = () => {
     return (
         <Routes>
+            <Route path="/" element={<WelcomePage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route path="/admin" element={<ProtectedRoute />}>
@@ -41,7 +44,7 @@ const AppRouter: React.FC = () => {
                 <Route path="audit-logs" element={<AuditLogPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/login" />} />
+            <Route path="*" element={<Navigate to="/" />} />
         </Routes>
     );
 };

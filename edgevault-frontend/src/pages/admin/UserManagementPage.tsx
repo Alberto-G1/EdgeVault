@@ -6,6 +6,9 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import UserForm from '../../components/admin/UserForm';
 import { usePermissions } from '../../hooks/usePermissions';
+import styled from 'styled-components';
+import FullPageLoader from '../../components/common/FullPageLoader';
+import HoverButton from '../../components/common/HoverButton';
 
 const UserManagementPage: React.FC = () => {
     const { hasPermission, hasAnyPermission } = usePermissions();
@@ -93,64 +96,68 @@ const UserManagementPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div>Loading users...</div>;
+    if (loading) return <FullPageLoader />;
 
     return (
-        <div className="container mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
+        <PageContainer>
+            <PageHeader>
+                <h1 className="title">User Management</h1>
                 {hasPermission('USER_CREATE') && (
-                    <button onClick={() => handleOpenModal()} className="btn-primary flex items-center">
-                        <Plus size={20} className="mr-2" /> Add User
-                    </button>
+                    <HoverButton 
+                        onClick={() => handleOpenModal()}
+                        firstText="Add User"
+                        secondText={<><Plus size={20} /> New</>}
+                    />
                 )}
-            </div>
+            </PageHeader>
 
-            <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
+            <TableContainer>
+                <StyledTable>
+                    <thead>
                         <tr>
-                            <th className="th-style">Username</th>
-                            <th className="th-style">Email</th>
-                            <th className="th-style">Department</th>
-                            <th className="th-style">Status</th>
-                            <th className="th-style">Roles</th>
+                            <TableHeader>Username</TableHeader>
+                            <TableHeader>Email</TableHeader>
+                            <TableHeader>Department</TableHeader>
+                            <TableHeader>Status</TableHeader>
+                            <TableHeader>Roles</TableHeader>
                             {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
-                                <th className="th-style text-right">Actions</th>
+                                <TableHeader style={{ textAlign: 'right' }}>Actions</TableHeader>
                             )}
                         </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody>
                         {users.map((user) => (
-                            <tr key={user.id}>
-                                <td className="td-style font-medium">{user.username}</td>
-                                <td className="td-style">{user.email}</td>
-                                <td className="td-style">{user.departmentName}</td>
-                                <td className="td-style">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                        user.enabled
-                                            ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                                            : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                                    }`}>
+                            <TableRow key={user.id}>
+                                <TableCell className="font-medium">{user.username}</TableCell>
+                                <TableCell>{user.email}</TableCell>
+                                <TableCell>{user.departmentName}</TableCell>
+                                <TableCell>
+                                    <StatusBadge enabled={user.enabled}>
                                         {user.enabled ? 'Enabled' : 'Disabled'}
-                                    </span>
-                                </td>
-                                <td className="td-style">{(user.roles || []).map(r => r.name).join(', ')}</td>
+                                    </StatusBadge>
+                                </TableCell>
+                                <TableCell>{(user.roles || []).map(r => r.name).join(', ')}</TableCell>
                                 {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
-                                    <td className="td-style text-right space-x-2">
-                                        {hasPermission('USER_UPDATE') && (
-                                             <button onClick={() => handleOpenModal(user)} className="text-blue-500 hover:text-blue-700"><Edit size={18}/></button>
-                                        )}
-                                        {hasPermission('USER_DELETE') && (
-                                             <button onClick={() => handleDeleteUser(user.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
-                                        )}
-                                    </td>
+                                    <TableCell style={{ textAlign: 'right' }}>
+                                        <ActionButtons>
+                                            {hasPermission('USER_UPDATE') && (
+                                                <ActionButton onClick={() => handleOpenModal(user)} className="edit">
+                                                    <Edit size={18}/>
+                                                </ActionButton>
+                                            )}
+                                            {hasPermission('USER_DELETE') && (
+                                                <ActionButton onClick={() => handleDeleteUser(user.id)} className="delete">
+                                                    <Trash2 size={18}/>
+                                                </ActionButton>
+                                            )}
+                                        </ActionButtons>
+                                    </TableCell>
                                 )}
-                            </tr>
+                            </TableRow>
                         ))}
                     </tbody>
-                </table>
-            </div>
+                </StyledTable>
+            </TableContainer>
 
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={userToEdit ? 'Edit User' : 'Create New User'}>
                 <UserForm 
@@ -160,11 +167,173 @@ const UserManagementPage: React.FC = () => {
                     isLoading={isSubmitting} 
                 />
             </Modal>
-        </div>
+        </PageContainer>
     );
 };
 
-const thStyle = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider";
-const tdStyle = "px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200";
+const PageContainer = styled.div`
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: 'Poppins', sans-serif;
+
+    @media (max-width: 768px) {
+        padding: 30px 15px;
+    }
+
+    @media (max-width: 480px) {
+        padding: 20px 10px;
+    }
+`;
+
+const PageHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+
+    .title {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+
+        @media (max-width: 768px) {
+            font-size: 28px;
+        }
+
+        @media (max-width: 480px) {
+            font-size: 24px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+`;
+
+const TableContainer = styled.div`
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--shadow);
+
+    @media (max-width: 768px) {
+        overflow-x: auto;
+    }
+`;
+
+const StyledTable = styled.table`
+    width: 100%;
+    border-collapse: collapse;
+
+    @media (max-width: 768px) {
+        min-width: 800px;
+    }
+`;
+
+const TableHeader = styled.th`
+    padding: 20px 24px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+
+    @media (max-width: 768px) {
+        padding: 16px 20px;
+        font-size: 11px;
+    }
+`;
+
+const TableRow = styled.tr`
+    transition: background 0.2s ease;
+
+    &:hover {
+        background: var(--bg-primary);
+    }
+
+    &:not(:last-child) {
+        border-bottom: 1px solid var(--border-color);
+    }
+`;
+
+const TableCell = styled.td`
+    padding: 20px 24px;
+    font-size: 14px;
+    color: var(--text-primary);
+    white-space: nowrap;
+
+    &.font-medium {
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        padding: 16px 20px;
+        font-size: 13px;
+    }
+`;
+
+const StatusBadge = styled.span<{ enabled: boolean }>`
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    background: ${props => props.enabled ? 'var(--success)' : 'var(--danger)'};
+    color: white;
+
+    @media (max-width: 768px) {
+        padding: 4px 12px;
+        font-size: 11px;
+    }
+`;
+
+const ActionButtons = styled.div`
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+
+    @media (max-width: 768px) {
+        gap: 8px;
+    }
+`;
+
+const ActionButton = styled.button`
+    padding: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.edit {
+        color: var(--light-blue);
+
+        &:hover {
+            background: var(--light-blue);
+            color: white;
+        }
+    }
+
+    &.delete {
+        color: var(--danger);
+
+        &:hover {
+            background: var(--danger);
+            color: white;
+        }
+    }
+`;
 
 export default UserManagementPage;
