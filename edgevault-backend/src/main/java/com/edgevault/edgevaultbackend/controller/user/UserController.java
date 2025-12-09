@@ -21,10 +21,12 @@ public class UserController {
 
     private final UserService userService;
 
+    // This is the main, protected endpoint for the User Management page.
+    // The method call is changed from getAllUsers() to getAllUserDetails().
     @GetMapping
-    @PreAuthorize("hasAuthority('USER_READ')") // <-- UPDATED
-    public ResponseEntity<List<UserResponseDto>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    @PreAuthorize("hasAuthority('USER_READ')")
+    public ResponseEntity<List<UserResponseDto>> getAllUserDetails() {
+        return ResponseEntity.ok(userService.getAllUserDetails());
     }
 
     // --- UNSECURED ENDPOINT FOR CHAT ---

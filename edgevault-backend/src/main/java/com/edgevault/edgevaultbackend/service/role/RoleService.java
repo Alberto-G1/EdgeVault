@@ -8,7 +8,9 @@ import com.edgevault.edgevaultbackend.model.permission.Permission;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.repository.permission.PermissionRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
+import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final AuditService auditService;
 
     public List<RoleDto> getAllRoles() {
         return roleRepository.findAll().stream()
@@ -49,6 +52,15 @@ public class RoleService {
         }
 
         Role savedRole = roleRepository.save(role);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Created new role '%s' (ID: %d) with permissions [%s].",
+                savedRole.getName(),
+                savedRole.getId(),
+                request.getPermissions() != null ? String.join(", ", request.getPermissions()) : "none");
+        auditService.recordEvent(getCurrentUsername(), "ROLE_CREATE", auditDetails);
+        // -----------------
+
         return mapToRoleDto(savedRole);
     }
 
@@ -57,7 +69,6 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + roleId));
 
-        // Check for name duplication if name is being changed
         if (!role.getName().equals(request.getName())) {
             roleRepository.findByName(request.getName()).ifPresent(r -> {
                 throw new DuplicateResourceException("Role with name '" + request.getName() + "' already exists.");
@@ -72,18 +83,31 @@ public class RoleService {
         role.setPermissions(permissions);
 
         Role updatedRole = roleRepository.save(role);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Updated role '%s' (ID: %d). Set permissions to [%s].",
+                updatedRole.getName(),
+                updatedRole.getId(),
+                request.getPermissions() != null ? String.join(", ", request.getPermissions()) : "none");
+        auditService.recordEvent(getCurrentUsername(), "ROLE_UPDATE", auditDetails);
+        // -----------------
+
         return mapToRoleDto(updatedRole);
     }
 
     public void deleteRole(Long roleId) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + roleId));
-        if (role.getName().equals("SUPER_ADMIN") || role.getName().equals("USER")) {
+        if (role.getName().equals("Super Admin") || role.getName().equals("Department User")) { // Add other core roles here
             throw new IllegalStateException("Cannot delete core system roles.");
         }
-        // Add logic here to reassign users of this role if needed, or prevent deletion if in use.
-        // For now, we allow deletion.
+
         roleRepository.delete(role);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Deleted role '%s' (ID: %d).", role.getName(), roleId);
+        auditService.recordEvent(getCurrentUsername(), "ROLE_DELETE", auditDetails);
+        // -----------------
     }
 
 
@@ -102,5 +126,9 @@ public class RoleService {
                         .map(Permission::getName)
                         .collect(Collectors.toSet()))
                 .build();
+    }
+
+    private String getCurrentUsername() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

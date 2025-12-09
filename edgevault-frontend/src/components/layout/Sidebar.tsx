@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 
 const Sidebar: React.FC = () => {
@@ -76,6 +76,16 @@ const Sidebar: React.FC = () => {
                     <MessageSquare className="w-5 h-5 mr-3" />
                     Chat
                 </NavLink>
+                
+                {hasAnyPermission(['AUDIT_READ']) && (
+                    <NavLink
+                        to="/admin/audit-logs"
+                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    >
+                        <History className="w-5 h-5 mr-3" />
+                        Audit Logs
+                    </NavLink>
+                )}
             </nav>
             <div className="p-4 border-t border-gray-700 text-center text-xs text-gray-500">
                 EdgeVault v1.0.0
