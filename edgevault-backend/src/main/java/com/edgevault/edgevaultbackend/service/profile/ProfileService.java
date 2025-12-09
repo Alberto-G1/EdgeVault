@@ -9,6 +9,7 @@ import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
+import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,6 +28,7 @@ public class ProfileService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public UserProfileDto getCurrentUserProfile() {
         User currentUser = getCurrentUser();
@@ -69,6 +71,11 @@ public class ProfileService {
         currentUser.setProfilePictureUrl(request.getProfilePictureUrl());
 
         User updatedUser = userRepository.save(currentUser);
+
+        // --- AUDIT LOG ---
+        auditService.recordEvent(currentUser.getUsername(), "PROFILE_UPDATE_PERSONAL", "User updated their personal profile information.");
+        // -----------------
+
         return mapToUserProfileDto(updatedUser);
     }
 
@@ -82,6 +89,11 @@ public class ProfileService {
         currentUser.setSupervisorName(request.getSupervisorName());
 
         User updatedUser = userRepository.save(currentUser);
+
+        // --- AUDIT LOG ---
+        auditService.recordEvent(currentUser.getUsername(), "PROFILE_UPDATE_WORK", "User updated their work profile information.");
+        // -----------------
+
         return mapToUserProfileDto(updatedUser);
     }
 
@@ -97,6 +109,10 @@ public class ProfileService {
         currentUser.setPasswordLastUpdated(LocalDateTime.now());
         currentUser.setPasswordChangeRequired(false);
 
+        // --- AUDIT LOG ---
+        auditService.recordEvent(currentUser.getUsername(), "PASSWORD_CHANGE_SUCCESS", "User successfully changed their password.");
+        // -----------------
+        
         userRepository.save(currentUser);
     }
 
