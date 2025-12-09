@@ -6,13 +6,15 @@ import com.edgevault.edgevaultbackend.dto.user.UserResponseDto;
 import com.edgevault.edgevaultbackend.dto.user.UserSummaryDto;
 import com.edgevault.edgevaultbackend.exception.DuplicateResourceException;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
+import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
-import com.edgevault.edgevaultbackend.model.department.Department;
-import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
+import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,11 +31,16 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final DepartmentRepository departmentRepository;
+    private final AuditService auditService; // <-- INJECT
 
-    public List<UserResponseDto> getAllUsers() {
+    public List<UserResponseDto> getAllUserDetails() {
         return userRepository.findAll().stream()
                 .map(this::mapToUserResponseDto)
                 .collect(Collectors.toList());
+    }
+
+    public List<UserSummaryDto> getAllUserSummaries() {
+        return userRepository.findAllUserSummaries();
     }
 
     @Transactional
@@ -49,9 +56,8 @@ public class UserService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode("Default@123U"));
-        user.setPasswordChangeRequired(true); // Force change on first login
+        user.setPasswordChangeRequired(true);
 
-        // --- ASSIGN DEPARTMENT ---
         Department department = departmentRepository.findById(request.getDepartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with id: " + request.getDepartmentId()));
         user.setDepartment(department);
@@ -63,6 +69,15 @@ public class UserService {
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Created new user '%s' with roles [%s] in department '%s'.",
+                savedUser.getUsername(),
+                request.getRoles().stream().collect(Collectors.joining(", ")),
+                department.getName());
+        auditService.recordEvent(getCurrentUsername(), "USER_CREATE", auditDetails);
+        // -----------------
+
         return mapToUserResponseDto(savedUser);
     }
 
@@ -71,7 +86,6 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        // Check for email duplication if email is being changed
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
                 throw new DuplicateResourceException("Email '" + request.getEmail() + "' is already in use.");
@@ -79,8 +93,6 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
 
-
-        // --- UPDATE DEPARTMENT ---
         Department department = departmentRepository.findById(request.getDepartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with id: " + request.getDepartmentId()));
         user.setDepartment(department);
@@ -92,6 +104,17 @@ public class UserService {
         user.setRoles(roles);
 
         User updatedUser = userRepository.save(user);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Updated user '%s' (ID: %d). Set enabled=%b, roles=[%s], department='%s'.",
+                updatedUser.getUsername(),
+                userId,
+                request.isEnabled(),
+                request.getRoles().stream().collect(Collectors.joining(", ")),
+                department.getName());
+        auditService.recordEvent(getCurrentUsername(), "USER_UPDATE", auditDetails);
+        // -----------------
+
         return mapToUserResponseDto(updatedUser);
     }
 
@@ -99,19 +122,22 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        // Simple check to prevent deleting the last SUPER_ADMIN
-        boolean isSuperAdmin = user.getRoles().stream().anyMatch(role -> role.getName().equals("SUPER_ADMIN"));
+        boolean isSuperAdmin = user.getRoles().stream().anyMatch(role -> role.getName().equals("Super Admin"));
         if (isSuperAdmin) {
             long superAdminCount = userRepository.findAll().stream()
-                    .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("SUPER_ADMIN")))
+                    .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("Super Admin")))
                     .count();
             if (superAdminCount <= 1) {
                 throw new IllegalStateException("Cannot delete the last super administrator.");
             }
         }
         userRepository.delete(user);
-    }
 
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Deleted user '%s' (ID: %d).", user.getUsername(), userId);
+        auditService.recordEvent(getCurrentUsername(), "USER_DELETE", auditDetails);
+        // -----------------
+    }
 
     private UserResponseDto mapToUserResponseDto(User user) {
         return UserResponseDto.builder()
@@ -126,7 +152,7 @@ public class UserService {
                 .build();
     }
 
-    public List<UserSummaryDto> getAllUserSummaries() {
-        return userRepository.findAllUserSummaries();
+    private String getCurrentUsername() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

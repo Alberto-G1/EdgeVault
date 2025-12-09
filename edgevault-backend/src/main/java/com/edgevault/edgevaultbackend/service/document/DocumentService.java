@@ -12,11 +12,12 @@ import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.document.DocumentRepository;
 import com.edgevault.edgevaultbackend.repository.document.DocumentVersionRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
-import com.edgevault.edgevaultbackend.service.storage.FileStorageService;
+import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import com.edgevault.edgevaultbackend.service.search.SearchService;
-import org.springframework.core.io.Resource;
+import com.edgevault.edgevaultbackend.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class DocumentService {
     private final DocumentVersionRepository documentVersionRepository;
     private final FileStorageService fileStorageService;
     private final SearchService searchService;
+    private final AuditService auditService;
 
     @Transactional
     public DocumentResponseDto uploadNewDocument(String title, String description, MultipartFile file) throws IOException {
@@ -74,13 +76,16 @@ public class DocumentService {
         document.setLatestVersion(version);
 
         Document savedDocument = documentRepository.save(document);
-
-        // --- INDEX THE DOCUMENT IN ELASTICSEARCH ---
         searchService.indexDocument(version, file);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Uploaded new document '%s' (ID: %d) with filename '%s'.",
+                title, savedDocument.getId(), file.getOriginalFilename());
+        auditService.recordEvent(currentUser.getUsername(), "DOCUMENT_UPLOAD", auditDetails);
+        // ---------------------
 
         return mapToDocumentResponseDto(savedDocument);
     }
-
 
     @Transactional
     public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file) throws IOException {
@@ -120,9 +125,13 @@ public class DocumentService {
 
         // Save the parent document. Cascade will save the new version.
         Document updatedDocument = documentRepository.save(document);
-
-        // --- NEW: INDEX THE NEW VERSION ---
         searchService.indexDocument(newVersion, file);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Uploaded new version (v%d) for document '%s' (ID: %d).",
+                newVersion.getVersionNumber(), updatedDocument.getTitle(), documentId);
+        auditService.recordEvent(currentUser.getUsername(), "DOCUMENT_NEW_VERSION", auditDetails);
+        // ---------------------
 
         return mapToDocumentResponseDto(updatedDocument);
     }
@@ -187,7 +196,6 @@ public class DocumentService {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
 
-        // Security Check
         if (!document.getDepartment().getId().equals(currentUser.getDepartment().getId())) {
             throw new org.springframework.security.access.AccessDeniedException("You do not have permission to delete this document.");
         }
@@ -197,6 +205,11 @@ public class DocumentService {
         document.setDeletionRequestedAt(LocalDateTime.now());
 
         documentRepository.save(document);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Requested deletion for document '%s' (ID: %d).", document.getTitle(), documentId);
+        auditService.recordEvent(currentUser.getUsername(), "DOCUMENT_DELETE_REQUEST", auditDetails);
+        // ---------------------
     }
 
     // --- METHOD: Get all documents pending deletion ---
@@ -205,7 +218,6 @@ public class DocumentService {
         return documentRepository.findDocumentsPendingDeletion();
     }
 
-    // --- METHOD: Approve a deletion request ---
     @Transactional
     public void approveDeletion(Long documentId) {
         Document document = documentRepository.findById(documentId)
@@ -215,12 +227,16 @@ public class DocumentService {
             throw new IllegalStateException("Document is not pending deletion.");
         }
 
-        // Set status to ARCHIVED. A future process could permanently delete these.
         document.setStatus(DocumentStatus.ARCHIVED);
         documentRepository.save(document);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Approved deletion for document '%s' (ID: %d), originally requested by '%s'.",
+                document.getTitle(), documentId, document.getDeletionRequester().getUsername());
+        auditService.recordEvent(getCurrentUsername(), "DOCUMENT_DELETE_APPROVE", auditDetails);
+        // ---------------------
     }
 
-    // --- METHOD: Reject a deletion request ---
     @Transactional
     public void rejectDeletion(Long documentId) {
         Document document = documentRepository.findById(documentId)
@@ -230,11 +246,15 @@ public class DocumentService {
             throw new IllegalStateException("Document is not pending deletion.");
         }
 
-        // Revert status to ACTIVE and clear deletion fields
         document.setStatus(DocumentStatus.ACTIVE);
         document.setDeletionRequester(null);
         document.setDeletionRequestedAt(null);
         documentRepository.save(document);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Rejected deletion for document '%s' (ID: %d).", document.getTitle(), documentId);
+        auditService.recordEvent(getCurrentUsername(), "DOCUMENT_DELETE_REJECT", auditDetails);
+        // ---------------------
     }
 
     private DocumentApprovalDto mapToDocumentApprovalDto(Document doc) {
@@ -287,5 +307,7 @@ public class DocumentService {
                 .build();
     }
 
-
+    private String getCurrentUsername() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
 }

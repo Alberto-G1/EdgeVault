@@ -2,33 +2,30 @@ package com.edgevault.edgevaultbackend.service.chat;
 
 import com.edgevault.edgevaultbackend.dto.chat.ChatMessageDto;
 import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
-import com.edgevault.edgevaultbackend.model.chat.ChatMessage;
 import com.edgevault.edgevaultbackend.model.chat.Conversation;
 import com.edgevault.edgevaultbackend.model.chat.ConversationType;
-import com.edgevault.edgevaultbackend.model.document.Document;
+import com.edgevault.edgevaultbackend.model.chat.ChatMessage;
 import com.edgevault.edgevaultbackend.model.user.User;
-import com.edgevault.edgevaultbackend.repository.chat.ChatMessageRepository;
 import com.edgevault.edgevaultbackend.repository.chat.ConversationRepository;
-import com.edgevault.edgevaultbackend.repository.document.DocumentRepository;
+import com.edgevault.edgevaultbackend.repository.chat.ChatMessageRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
+import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
-    private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final ConversationRepository conversationRepository;
+    private final AuditService auditService;
 
     @Transactional
     public ChatMessage saveMessage(Long conversationId, String content, String senderUsername) {
@@ -59,11 +56,11 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
-    // --- NEW METHOD FOR STARTING A DM ---
+    // --- METHOD FOR STARTING A DM ---
     @Transactional
     public Conversation getOrCreateDirectConversation(String username1, String username2) {
-        User user1 = userRepository.findByUsername(username1).orElseThrow();
-        User user2 = userRepository.findByUsername(username2).orElseThrow();
+        User user1 = userRepository.findByUsername(username1).orElseThrow(() -> new ResourceNotFoundException("User not found: " + username1));
+        User user2 = userRepository.findByUsername(username2).orElseThrow(() -> new ResourceNotFoundException("User not found: " + username2));
 
         return conversationRepository.findDirectConversationBetweenUsers(user1.getId(), user2.getId())
                 .orElseGet(() -> {
@@ -71,7 +68,15 @@ public class ChatService {
                     newDm.setType(ConversationType.DIRECT_MESSAGE);
                     newDm.setParticipants(Set.of(user1, user2));
                     newDm.setCreatedAt(LocalDateTime.now());
-                    return conversationRepository.save(newDm);
+                    Conversation savedDm = conversationRepository.save(newDm);
+
+                    // --- AUDIT LOG ---
+                    String auditDetails = String.format("Created new direct message conversation between '%s' and '%s' (ID: %d).",
+                            username1, username2, savedDm.getId());
+                    auditService.recordEvent(username1, "CONVERSATION_CREATE", auditDetails);
+                    // -----------------
+
+                    return savedDm;
                 });
     }
 
