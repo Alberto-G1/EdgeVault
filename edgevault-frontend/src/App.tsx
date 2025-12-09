@@ -1,13 +1,13 @@
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import AppRouter from './routes/AppRouter';
+import AuthEnforcer from './components/auth/AuthEnforcer';
 
 function App() {
   return (
     <ThemeProvider>
         <AuthProvider>
-          <AppRouter />
+          <AuthEnforcer />
           <Toaster position="top-right" />
         </AuthProvider>
     </ThemeProvider>

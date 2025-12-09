@@ -24,7 +24,6 @@ public class AuthenticationService {
     private final AuditService auditService;
 
     public AuthenticationResponse login(LoginRequest request) {
-        // 1. Authenticate the user
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
@@ -32,33 +31,28 @@ public class AuthenticationService {
                 )
         );
 
-        // 2. Fetch the full user object
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database"));
 
-        // 3. Generate the token
         String jwtToken = jwtService.generateToken(user);
 
-        // 4. Gather all permissions
         Set<String> permissions = user.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
                 .map(permission -> permission.getName())
                 .collect(Collectors.toSet());
 
-        // 5. Build the final response object
         AuthenticationResponse response = AuthenticationResponse.builder()
                 .token(jwtToken)
                 .permissions(permissions)
+                .passwordChangeRequired(user.isPasswordChangeRequired()) // <-- POPULATE THE FLAG
                 .build();
 
-        // 6. Fire and forget the audit event
         auditService.recordEvent(
                 user.getUsername(),
                 "USER_LOGIN_SUCCESS",
                 "User '" + user.getUsername() + "' successfully logged in."
         );
 
-        // 7. Return the response
         return response;
     }
 }

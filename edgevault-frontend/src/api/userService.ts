@@ -1,28 +1,31 @@
 import apiClient from './axiosConfig';
 import type { User } from '../types/user';
 
-// Assuming your DTOs on the backend look like this.
-// CreateUserRequestDto
+// Corresponds to CreateUserRequestDto
 interface CreateUserPayload {
     username: string;
     email: string;
-    password: string;
     roles: string[];
-    departmentId: number; 
-
+    departmentId: number;
 }
 
+// Corresponds to UpdateUserRequestDto
 interface UpdateUserPayload {
     email: string;
     enabled: boolean;
     roles: string[];
-    departmentId: number; 
-    description: string;
+    departmentId: number;
 }
 
-
-export const getAllUsers = async (): Promise<User[]> => {
+// For ChatSidebar - calls the lightweight endpoint
+export const getAllUserSummaries = async (): Promise<User[]> => {
     const response = await apiClient.get<User[]>('/users/summaries');
+    return response.data;
+};
+
+// For UserManagementPage - calls the detailed, protected endpoint
+export const getAllUserDetails = async (): Promise<User[]> => {
+    const response = await apiClient.get<User[]>('/users');
     return response.data;
 };
 

@@ -1,10 +1,10 @@
-import React, { createContext, useState, useEffect, type ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useEffect, type ReactNode, useMemo, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 interface AuthToken {
-    sub: string; // Subject, which is the username
-    iat: number; // Issued at
-    exp: number; // Expiration time
+    sub: string;
+    iat: number;
+    exp: number;
 }
 
 interface AuthContextType {
@@ -12,15 +12,13 @@ interface AuthContextType {
     user: AuthToken | null;
     token: string | null;
     permissions: Set<string>;
-    login: (token: string, permissions: string[]) => void;
+    passwordChangeRequired: boolean;
+    login: (token: string, permissions: string[], passwordChangeRequired: boolean) => void;
     logout: () => void;
+    fulfillPasswordChange: () => void; // New function to update the flag
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-interface AuthProviderProps {
-    children: ReactNode;
-}
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
@@ -28,6 +26,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [permissions, setPermissions] = useState<Set<string>>(() => {
         const savedPerms = localStorage.getItem('userPermissions');
         return savedPerms ? new Set(JSON.parse(savedPerms)) : new Set();
+    });
+    const [passwordChangeRequired, setPasswordChangeRequired] = useState<boolean>(() => {
+        const savedFlag = localStorage.getItem('passwordChangeRequired');
+        return savedFlag ? JSON.parse(savedFlag) : false;
     });
 
     useEffect(() => {
@@ -49,11 +51,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [token]);
 
-    const login = (newToken: string, newPermissions: string[]) => {
+    const login = (newToken: string, newPermissions: string[], newPasswordChangeRequired: boolean) => {
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('userPermissions', JSON.stringify(newPermissions));
+        localStorage.setItem('passwordChangeRequired', JSON.stringify(newPasswordChangeRequired));
         setToken(newToken);
         setPermissions(new Set(newPermissions));
+        setPasswordChangeRequired(newPasswordChangeRequired);
     };
 
     const logout = () => {
@@ -63,19 +67,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(null);
         setPermissions(new Set());
     };
+    
+    // New function to update state after a successful password change
+    const fulfillPasswordChange = useCallback(() => {
+        localStorage.setItem('passwordChangeRequired', 'false');
+        setPasswordChangeRequired(false);
+    }, []);
 
-    // --- THIS IS THE FIX for the WebSocket re-connect loop ---
-    // useMemo ensures that the context value object is only recreated when its contents actually change.
-    // This provides a "stable" value to all consumers of the context.
     const contextValue = useMemo(() => ({
         isAuthenticated: !!token && !!user,
         user,
         token,
         permissions,
+        passwordChangeRequired,
         login,
         logout,
-    }), [token, user, permissions]);
-    // -----------------------------------------------------------
+        fulfillPasswordChange,
+    }), [token, user, permissions, passwordChangeRequired, fulfillPasswordChange]);
 
     return (
         <AuthContext.Provider value={contextValue}>

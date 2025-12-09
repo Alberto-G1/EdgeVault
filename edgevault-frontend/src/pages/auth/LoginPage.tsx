@@ -20,8 +20,10 @@ const LoginPage: React.FC = () => {
 
         try {
             const response = await apiClient.post('/auth/login', { username, password });
-            const { token, permissions } = response.data;
-            login(token, permissions);
+            // --- THIS IS THE FIX ---
+            const { token, permissions, passwordChangeRequired } = response.data;
+            login(token, permissions, passwordChangeRequired);
+            // -----------------------
             toast.success('Login successful!');
             navigate('/admin/dashboard');
         } catch (err: any) {

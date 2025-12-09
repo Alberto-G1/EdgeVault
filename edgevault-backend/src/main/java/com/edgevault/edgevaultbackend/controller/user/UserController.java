@@ -21,36 +21,35 @@ public class UserController {
 
     private final UserService userService;
 
-    // This is the main, protected endpoint for the User Management page.
-    // The method call is changed from getAllUsers() to getAllUserDetails().
+    // Endpoint for lightweight user list (for chat)
+    @GetMapping("/summaries")
+    public ResponseEntity<List<UserSummaryDto>> getAllUserSummaries() {
+        return ResponseEntity.ok(userService.getAllUserSummaries());
+    }
+
+    // Endpoint for detailed user list (for User Management page)
     @GetMapping
     @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<List<UserResponseDto>> getAllUserDetails() {
         return ResponseEntity.ok(userService.getAllUserDetails());
     }
 
-    // --- UNSECURED ENDPOINT FOR CHAT ---
-    @GetMapping("/summaries")
-    public ResponseEntity<List<UserSummaryDto>> getAllUserSummaries() {
-        return ResponseEntity.ok(userService.getAllUserSummaries());
-    }
-
     @PostMapping
-    @PreAuthorize("hasAuthority('USER_CREATE')") // <-- UPDATED
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody CreateUserRequestDto request) {
         UserResponseDto createdUser = userService.createUser(request);
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('USER_UPDATE')") // <-- UPDATED
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
     public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequestDto request) {
         UserResponseDto updatedUser = userService.updateUser(id, request);
         return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('USER_DELETE')") // <-- UPDATED
+    @PreAuthorize("hasAuthority('USER_DELETE')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

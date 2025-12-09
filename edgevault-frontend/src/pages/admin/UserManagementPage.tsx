@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { getAllUsers, createUser, updateUser, deleteUser } from '../../api/userService';
+import React, { useEffect, useState, useCallback} from 'react';
+import { getAllUserDetails, createUser, updateUser, deleteUser } from '../../api/userService'; // <-- CRITICAL: Use getAllUserDetails
 import type { User } from '../../types/user';
 import { toast } from 'react-hot-toast';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -15,21 +15,30 @@ const UserManagementPage: React.FC = () => {
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const fetchUsers = async () => {
+
+    // Wrap fetchUsers in useCallback to make it a stable function
+    const fetchUsers = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getAllUsers();
+            const data = await getAllUserDetails();
             setUsers(data);
         } catch (error) {
-            toast.error('Failed to fetch users.');
+            toast.error('Failed to fetch detailed user list.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []); // Empty dependency array means this function is created only once
 
+    // This useEffect now has stable dependencies and will only run once,
+    // or if the user's permissions genuinely change (e.g., after re-login).
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        if (hasPermission('USER_READ')) {
+            fetchUsers();
+        } else {
+            setLoading(false); 
+        }
+    }, [hasPermission, fetchUsers]);
+    // -----------------------
 
     const handleOpenModal = (user: User | null = null) => {
         setUserToEdit(user);
@@ -52,7 +61,7 @@ const UserManagementPage: React.FC = () => {
 
         const promise = userToEdit
             ? updateUser(userToEdit.id, payload)
-            : createUser({ ...payload, username: formData.username, password: formData.password });
+            : createUser({ ...payload, username: formData.username }); // Password is not sent
 
         try {
             await toast.promise(promise, {
@@ -91,12 +100,8 @@ const UserManagementPage: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
                 {hasPermission('USER_CREATE') && (
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="btn-primary flex items-center"
-                    >
-                        <Plus size={20} className="mr-2" />
-                        Add User
+                    <button onClick={() => handleOpenModal()} className="btn-primary flex items-center">
+                        <Plus size={20} className="mr-2" /> Add User
                     </button>
                 )}
             </div>
@@ -130,7 +135,7 @@ const UserManagementPage: React.FC = () => {
                                         {user.enabled ? 'Enabled' : 'Disabled'}
                                     </span>
                                 </td>
-                                <td className="td-style">{user.roles.map(r => r.name).join(', ')}</td>
+                                <td className="td-style">{(user.roles || []).map(r => r.name).join(', ')}</td>
                                 {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
                                     <td className="td-style text-right space-x-2">
                                         {hasPermission('USER_UPDATE') && (
