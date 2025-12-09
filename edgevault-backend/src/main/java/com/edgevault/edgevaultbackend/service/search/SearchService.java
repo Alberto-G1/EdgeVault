@@ -2,15 +2,24 @@ package com.edgevault.edgevaultbackend.service.search;
 
 import com.edgevault.edgevaultbackend.model.document.DocumentVersion;
 import com.edgevault.edgevaultbackend.model.search.DocumentSearch;
+import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.search.DocumentSearchRepository;
+import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.pdmodel.PDDocument; // <-- IMPORT PDFBox
-import org.apache.pdfbox.text.PDFTextStripper; // <-- IMPORT PDFBox
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.Criteria;
+import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +27,8 @@ import java.io.InputStream;
 public class SearchService {
 
     private final DocumentSearchRepository documentSearchRepository;
-    // Tika instance is no longer needed
+    private final ElasticsearchOperations elasticsearchOperations;
+    private final UserRepository userRepository;
 
     public void indexDocument(DocumentVersion version, MultipartFile file) {
         String content = "";
@@ -69,5 +79,38 @@ public class SearchService {
     public void removeDocumentFromIndex(DocumentVersion version) {
         documentSearchRepository.deleteById(version.getId().toString());
         log.info("Removed document version from index: {}", version.getId());
+    }
+
+    public List<DocumentSearch> searchDocuments(String query) {
+        User currentUser = getCurrentUser();
+        Long departmentId = currentUser.getDepartment().getId();
+
+        // Create a criteria for the search query.
+        // This will search in title, description, fileName, and the extracted content.
+        Criteria searchCriteria = new Criteria("title").contains(query)
+                .or("description").contains(query)
+                .or("fileName").contains(query)
+                .or("content").contains(query);
+
+        // Create a filter criteria to only allow results from the user's department.
+        Criteria departmentFilter = new Criteria("departmentId").is(departmentId);
+
+        // Combine the criteria: must match the department AND the search query.
+        Criteria finalCriteria = departmentFilter.and(searchCriteria);
+
+        // Build and execute the query
+        CriteriaQuery criteriaQuery = new CriteriaQuery(finalCriteria);
+        SearchHits<DocumentSearch> searchHits = elasticsearchOperations.search(criteriaQuery, DocumentSearch.class);
+
+        return searchHits.stream()
+                .map(hit -> hit.getContent())
+                .collect(Collectors.toList());
+    }
+
+    private User getCurrentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        // Use the new method that eagerly fetches the required relationships
+        return userRepository.findByUsernameWithDetails(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 }

@@ -15,6 +15,7 @@ import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import com.edgevault.edgevaultbackend.service.search.SearchService;
 import com.edgevault.edgevaultbackend.service.storage.FileStorageService;
+import com.edgevault.edgevaultbackend.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -43,6 +44,7 @@ public class DocumentService {
     private final FileStorageService fileStorageService;
     private final SearchService searchService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional
     public DocumentResponseDto uploadNewDocument(String title, String description, MultipartFile file) throws IOException {
@@ -230,6 +232,12 @@ public class DocumentService {
         document.setStatus(DocumentStatus.ARCHIVED);
         documentRepository.save(document);
 
+        // --- SEND NOTIFICATION ---
+        User requester = document.getDeletionRequester();
+        String message = String.format("Your deletion request for document '%s' has been approved.", document.getTitle());
+        notificationService.createAndSendNotification(requester, message, null); // No link needed for an approved deletion
+        // -------------------------
+
         // --- AUDIT LOG ---
         String auditDetails = String.format("Approved deletion for document '%s' (ID: %d), originally requested by '%s'.",
                 document.getTitle(), documentId, document.getDeletionRequester().getUsername());
@@ -250,6 +258,13 @@ public class DocumentService {
         document.setDeletionRequester(null);
         document.setDeletionRequestedAt(null);
         documentRepository.save(document);
+
+        // --- SEND NOTIFICATION ---
+        User requester = document.getDeletionRequester();
+        String message = String.format("Your deletion request for document '%s' has been rejected.", document.getTitle());
+        String link = "/admin/documents/" + document.getId(); // Link back to the restored document
+        notificationService.createAndSendNotification(requester, message, link);
+        // -------------------------
 
         // --- AUDIT LOG ---
         String auditDetails = String.format("Rejected deletion for document '%s' (ID: %d).", document.getTitle(), documentId);
