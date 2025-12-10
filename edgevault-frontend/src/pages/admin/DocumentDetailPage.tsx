@@ -3,10 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getDocumentDetails, downloadDocumentVersion, uploadNewVersion } from '../../api/documentService';
 import type { Document } from '../../types/document';
 import { toast } from 'react-hot-toast';
-import { FileClock, Download, ArrowLeft, Upload } from 'lucide-react';
+import { FileClock, Download, ArrowLeft, Upload, FileText, User, Calendar, GitBranch, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import styled from 'styled-components';
+import Loader from '../../components/common/Loader';
+import HoverButton from '../../components/common/HoverButton';
 import Modal from '../../components/common/Modal';
-import DocumentChat from '../../components/document/DocumentChat'; 
+import DocumentChat from '../../components/document/DocumentChat';
 
 const DocumentDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -18,12 +21,17 @@ const DocumentDetailPage: React.FC = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [fileToUpload, setFileToUpload] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
 
     const fetchDetails = async () => {
         if (!id) return;
         try {
             const data = await getDocumentDetails(Number(id));
             setDocument(data);
+            // Expand the latest version by default
+            if (data.versionHistory.length > 0) {
+                setExpandedVersion(data.versionHistory[0].id);
+            }
         } catch (error) {
             toast.error("Could not load document details.");
             navigate('/admin/documents');
@@ -37,15 +45,8 @@ const DocumentDetailPage: React.FC = () => {
     }, [id, navigate]);
 
     const handleDownload = async (versionId: number) => {
-        const promise = downloadDocumentVersion(versionId);
-        toast.promise(promise, {
-            loading: 'Preparing download...',
-            success: 'Download starting!',
-            error: 'Download failed.',
-        });
-
         try {
-            const { data, filename } = await promise;
+            const { data, filename } = await downloadDocumentVersion(versionId);
             const url = window.URL.createObjectURL(data);
             const link = document.createElement('a');
             link.href = url;
@@ -54,7 +55,9 @@ const DocumentDetailPage: React.FC = () => {
             link.click();
             window.URL.revokeObjectURL(url);
             link.parentNode?.removeChild(link);
+            toast.success('Download started!');
         } catch (error) {
+            toast.error('Download failed.');
             console.error("Download error:", error);
         }
     };
@@ -78,9 +81,13 @@ const DocumentDetailPage: React.FC = () => {
                 success: 'New version uploaded successfully!',
                 error: (err) => err.response?.data?.message || 'Upload failed.',
             });
-            setDocument(updatedDocument); 
+            setDocument(updatedDocument);
             setIsUploadModalOpen(false);
             setFileToUpload(null);
+            // Expand the new version
+            if (updatedDocument.versionHistory.length > 0) {
+                setExpandedVersion(updatedDocument.versionHistory[0].id);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -88,111 +95,699 @@ const DocumentDetailPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div>Loading details...</div>;
+    const toggleVersionExpand = (versionId: number) => {
+        setExpandedVersion(expandedVersion === versionId ? null : versionId);
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    if (loading) {
+        return (
+            <LoaderContainer>
+                <Loader />
+            </LoaderContainer>
+        );
+    }
+    
     if (!document) return null;
 
     return (
-        <div className="container mx-auto">
-             <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{document.title}</h1>
-                    <p className="text-gray-500 text-sm mt-1">
-                        Latest Version: {document.latestVersion.versionNumber} ({document.fileName})
-                    </p>
-                </div>
-                <div className="flex items-center space-x-2">
+        <PageContainer>
+            <PageHeader>
+                <HeaderContent>
+                    <BackButton onClick={() => navigate('/admin/documents')}>
+                        <ArrowLeft size={24} />
+                    </BackButton>
+                    <PageTitle>
+                        <FileText size={32} />
+                        {document.title}
+                    </PageTitle>
+                </HeaderContent>
+                
+                <ButtonGroup>
                     {hasPermission('DOCUMENT_UPDATE') && (
-                        <button onClick={() => setIsUploadModalOpen(true)} className="btn-primary flex items-center">
-                            <Upload size={18} className="mr-2"/>
-                            Upload New Version
-                        </button>
+                        <UploadButton 
+                            onClick={() => setIsUploadModalOpen(true)}
+                            textOne="Upload New Version"
+                            textTwo="New Version"
+                            width="220px"
+                            height="55px"
+                        />
                     )}
-                    <button onClick={() => navigate('/admin/documents')} className="btn-secondary flex items-center">
-                        <ArrowLeft size={18} className="mr-2"/>
-                        Back to List
-                    </button>
-                </div>
-            </div>
+                    <DownloadButton 
+                        onClick={() => handleDownload(document.latestVersion.id)}
+                        textOne="Download Latest"
+                        textTwo="Download Now"
+                        width="180px"
+                        height="55px"
+                    />
+                </ButtonGroup>
+            </PageHeader>
 
-            {document.description && (
-                <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
-                    <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Description</h2>
-                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{document.description}</p>
-                </div>
-            )}
-            
-            <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-200"><FileClock className="mr-2"/> Version History</h2>
-                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {document.versionHistory.map(version => (
-                        <li key={version.id} className="py-4 flex justify-between items-center">
-                            <div>
-                                <p className="font-bold text-lg text-gray-900 dark:text-gray-100">Version {version.versionNumber}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Uploaded by <span className="font-medium">{version.uploaderUsername}</span> on {new Date(version.uploadTimestamp).toLocaleString()}
-                                </p>
-                            </div>
-                            <button onClick={() => handleDownload(version.id)} className="btn-primary flex items-center">
-                                <Download size={16} className="mr-2"/>
-                                Download
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
-                {/* Left Column for Details */}
-                <div className="lg:col-span-2 space-y-6">
+            <ContentGrid>
+                {/* Left Column - Document Details */}
+                <LeftColumn>
+                    <DocumentInfoCard>
+                        <CardHeader>
+                            <CardIcon style={{ background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4' }}>
+                                <FileText size={24} />
+                            </CardIcon>
+                            <CardTitle>Document Information</CardTitle>
+                        </CardHeader>
+                        
+                        <InfoGrid>
+                            <InfoItem>
+                                <InfoIcon style={{ background: 'rgba(46, 151, 197, 0.1)', color: 'rgb(46, 151, 197)' }}>
+                                    <GitBranch size={16} />
+                                </InfoIcon>
+                                <InfoContent>
+                                    <InfoLabel>Latest Version</InfoLabel>
+                                    <InfoValue>v{document.latestVersion.versionNumber}</InfoValue>
+                                </InfoContent>
+                            </InfoItem>
+                            
+                            <InfoItem>
+                                <InfoIcon style={{ background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' }}>
+                                    <FileText size={16} />
+                                </InfoIcon>
+                                <InfoContent>
+                                    <InfoLabel>File Name</InfoLabel>
+                                    <InfoValue>{document.fileName}</InfoValue>
+                                </InfoContent>
+                            </InfoItem>
+                            
+                            <InfoItem>
+                                <InfoIcon style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
+                                    <User size={16} />
+                                </InfoIcon>
+                                <InfoContent>
+                                    <InfoLabel>Uploaded By</InfoLabel>
+                                    <InfoValue>{document.latestVersion.uploaderUsername}</InfoValue>
+                                </InfoContent>
+                            </InfoItem>
+                            
+                            <InfoItem>
+                                <InfoIcon style={{ background: 'rgba(103, 232, 249, 0.1)', color: '#67e8f9' }}>
+                                    <Calendar size={16} />
+                                </InfoIcon>
+                                <InfoContent>
+                                    <InfoLabel>Last Updated</InfoLabel>
+                                    <InfoValue>{new Date(document.latestVersion.uploadTimestamp).toLocaleString()}</InfoValue>
+                                </InfoContent>
+                            </InfoItem>
+                        </InfoGrid>
+                    </DocumentInfoCard>
+                    
                     {document.description && (
-                        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
-                            <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Description</h2>
-                            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{document.description}</p>
-                        </div>
+                        <DescriptionCard>
+                            <CardHeader>
+                                <CardIcon style={{ background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' }}>
+                                    <FileText size={24} />
+                                </CardIcon>
+                                <CardTitle>Description</CardTitle>
+                            </CardHeader>
+                            <DescriptionText>
+                                {document.description}
+                            </DescriptionText>
+                        </DescriptionCard>
                     )}
                     
-                    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-200"><FileClock className="mr-2"/> Version History</h2>
-                        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {/* ... version history mapping is unchanged ... */}
-                        </ul>
-                    </div>
-                </div>
+                    <VersionHistoryCard>
+                        <CardHeader>
+                            <CardIcon style={{ background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4' }}>
+                                <FileClock size={24} />
+                            </CardIcon>
+                            <CardTitle>Version History</CardTitle>
+                        </CardHeader>
+                        
+                        <VersionList>
+                            {document.versionHistory.map((version) => (
+                                <VersionItem key={version.id} expanded={expandedVersion === version.id}>
+                                    <VersionHeader onClick={() => toggleVersionExpand(version.id)}>
+                                        <VersionInfo>
+                                            <VersionNumber>v{version.versionNumber}</VersionNumber>
+                                            <VersionMeta>
+                                                <User size={12} />
+                                                {version.uploaderUsername} • 
+                                                <Calendar size={12} />
+                                                {new Date(version.uploadTimestamp).toLocaleDateString()}
+                                            </VersionMeta>
+                                        </VersionInfo>
+                                        <VersionActions>
+                                            {expandedVersion === version.id ? (
+                                                <ChevronUp size={20} />
+                                            ) : (
+                                                <ChevronDown size={20} />
+                                            )}
+                                        </VersionActions>
+                                    </VersionHeader>
+                                    
+                                    {expandedVersion === version.id && (
+                                        <VersionDetails>
+                                            <DetailItem>
+                                                <DetailLabel>Upload Date:</DetailLabel>
+                                                <DetailValue>{new Date(version.uploadTimestamp).toLocaleString()}</DetailValue>
+                                            </DetailItem>
+                                            <DetailItem>
+                                                <DetailLabel>Uploaded By:</DetailLabel>
+                                                <DetailValue>{version.uploaderUsername}</DetailValue>
+                                            </DetailItem>
+                                            <DetailItem>
+                                                <DetailLabel>File Type:</DetailLabel>
+                                                <DetailValue>{document.fileName.split('.').pop()?.toUpperCase()}</DetailValue>
+                                            </DetailItem>
+                                            <DetailAction>
+                                                <DownloadVersionButton onClick={() => handleDownload(version.id)}>
+                                                    <Download size={16} />
+                                                    Download v{version.versionNumber}
+                                                </DownloadVersionButton>
+                                            </DetailAction>
+                                        </VersionDetails>
+                                    )}
+                                </VersionItem>
+                            ))}
+                        </VersionList>
+                    </VersionHistoryCard>
+                </LeftColumn>
 
-                {/* Right Column for Chat */}
-                <div className="lg:col-span-1">
-                    <DocumentChat documentId={document.id} />
-                </div>
-            </div>
-            
+                {/* Right Column - Document Chat */}
+                <RightColumn>
+                    <ChatCard>
+                        <DocumentChat documentId={document.id} />
+                    </ChatCard>
+                </RightColumn>
+            </ContentGrid>
+
             <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload New Version">
-                 <div className="space-y-4">
-                    <div>
-                        <label htmlFor="version-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <Upload size={32} className="text-gray-400"/>
-                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <input id="version-upload" type="file" onChange={handleFileSelect} className="hidden" />
-                        </label>
-                    </div>
+                <ModalContent>
+                    <UploadArea>
+                        <UploadLabel htmlFor="version-upload">
+                            <Upload size={48} />
+                            <UploadTitle>Click to upload new version</UploadTitle>
+                            <UploadSubtitle>Drag and drop your file here or click to browse</UploadSubtitle>
+                            <UploadHint>Supports: PDF, DOC, DOCX, TXT, XLS, XLSX (Max 50MB)</UploadHint>
+                        </UploadLabel>
+                        <FileInput
+                            id="version-upload"
+                            type="file"
+                            onChange={handleFileSelect}
+                        />
+                    </UploadArea>
+                    
                     {fileToUpload && (
-                        <p className="text-sm text-center font-medium text-gray-700 dark:text-gray-300">
-                            Selected file: <span className="text-cyan-600">{fileToUpload.name}</span>
-                        </p>
+                        <SelectedFile>
+                            <FileText size={20} />
+                            <FileInfo>
+                                <FileName>{fileToUpload.name}</FileName>
+                                <FileSize>{formatFileSize(fileToUpload.size)}</FileSize>
+                            </FileInfo>
+                        </SelectedFile>
                     )}
-                    <div className="flex justify-end pt-4">
-                        <button onClick={() => setIsUploadModalOpen(false)} type="button" className="btn-secondary mr-3">
+                    
+                    <ModalActions>
+                        <CancelButton type="button" onClick={() => setIsUploadModalOpen(false)}>
                             Cancel
-                        </button>
-                        <button onClick={handleUploadNewVersion} disabled={isUploading || !fileToUpload} className="btn-primary">
-                            {isUploading ? 'Uploading...' : 'Upload'}
-                        </button>
-                    </div>
-                </div>
+                        </CancelButton>
+                        <UploadButton type="button" onClick={handleUploadNewVersion} disabled={isUploading || !fileToUpload}>
+                            {isUploading ? 'Uploading...' : 'Upload New Version'}
+                        </UploadButton>
+                    </ModalActions>
+                </ModalContent>
             </Modal>
-        </div>
+        </PageContainer>
     );
 };
+
+// Styled Components
+const PageContainer = styled.div`
+    animation: fadeInUp 0.4s ease;
+    padding: 2rem;
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const LoaderContainer = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+`;
+
+const PageHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.05), rgba(150, 129, 158, 0.05));
+    border-radius: 20px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: stretch;
+        padding: 1rem;
+    }
+`;
+
+const HeaderContent = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+`;
+
+const BackButton = styled.button`
+    width: 48px;
+    height: 48px;
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(46, 151, 197);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        transform: translateX(-4px);
+    }
+`;
+
+const PageTitle = styled.h1`
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        font-size: 1.5rem;
+    }
+`;
+
+const ButtonGroup = styled.div`
+    display: flex;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        width: 100%;
+        
+        button {
+            flex: 1;
+        }
+    }
+`;
+
+const UploadButton = styled(HoverButton)`
+    @media (max-width: 768px) {
+        width: 100% !important;
+    }
+`;
+
+const DownloadButton = styled(HoverButton)`
+    @media (max-width: 768px) {
+        width: 100% !important;
+    }
+`;
+
+const ContentGrid = styled.div`
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+
+    @media (max-width: 1024px) {
+        grid-template-columns: 1fr;
+    }
+`;
+
+const LeftColumn = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+`;
+
+const RightColumn = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+`;
+
+const DocumentInfoCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 20px;
+    padding: 1.75rem;
+    box-shadow: 0 8px 24px var(--shadow);
+`;
+
+const DescriptionCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 20px;
+    padding: 1.75rem;
+    box-shadow: 0 8px 24px var(--shadow);
+`;
+
+const VersionHistoryCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 20px;
+    padding: 1.75rem;
+    box-shadow: 0 8px 24px var(--shadow);
+`;
+
+const ChatCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px var(--shadow);
+    height: 100%;
+`;
+
+const CardHeader = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+`;
+
+const CardIcon = styled.div`
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+
+const CardTitle = styled.h2`
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const InfoGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+`;
+
+const InfoItem = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+`;
+
+const InfoIcon = styled.div`
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+
+const InfoContent = styled.div`
+    flex: 1;
+`;
+
+const InfoLabel = styled.div`
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const InfoValue = styled.div`
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const DescriptionText = styled.p`
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.6;
+    white-space: pre-wrap;
+`;
+
+const VersionList = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+`;
+
+const VersionItem = styled.div<{ expanded: boolean }>`
+    background: var(--bg-primary);
+    border: 2px solid ${props => props.expanded ? 'rgb(46, 151, 197)' : 'var(--border-color)'};
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+`;
+
+const VersionHeader = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.05);
+    }
+`;
+
+const VersionInfo = styled.div`
+    flex: 1;
+`;
+
+const VersionNumber = styled.div`
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    margin-bottom: 0.25rem;
+`;
+
+const VersionMeta = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+
+    svg {
+        width: 12px;
+        height: 12px;
+    }
+`;
+
+const VersionActions = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+`;
+
+const VersionDetails = styled.div`
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+`;
+
+const DetailItem = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const DetailLabel = styled.div`
+    font-weight: 600;
+    color: var(--text-secondary);
+`;
+
+const DetailValue = styled.div`
+    font-weight: 500;
+    color: var(--text-primary);
+`;
+
+const DetailAction = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+`;
+
+const DownloadVersionButton = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 151, 197, 0.3);
+    }
+`;
+
+const ModalContent = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+`;
+
+const UploadArea = styled.div`
+    position: relative;
+    width: 100%;
+`;
+
+const UploadLabel = styled.label`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 200px;
+    border: 2px dashed rgba(46, 151, 197, 0.3);
+    border-radius: 16px;
+    background: rgba(46, 151, 197, 0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        border-color: rgb(46, 151, 197);
+    }
+`;
+
+const UploadTitle = styled.p`
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 1rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const UploadSubtitle = styled.p`
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const UploadHint = styled.p`
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 0.5rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const FileInput = styled.input`
+    display: none;
+`;
+
+const SelectedFile = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(46, 151, 197, 0.1);
+    border-radius: 12px;
+`;
+
+const FileInfo = styled.div`
+    flex: 1;
+`;
+
+const FileName = styled.div`
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const FileSize = styled.div`
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    margin-top: 0.25rem;
+`;
+
+const ModalActions = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+`;
+
+const CancelButton = styled.button`
+    padding: 0.875rem 1.75rem;
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.3);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    color: rgb(46, 151, 197);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 151, 197, 0.15);
+    }
+`;
 
 export default DocumentDetailPage;

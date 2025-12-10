@@ -2,32 +2,248 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import ChatSidebar from '../../components/chat/ChatSidebar';
 import MessagePanel from '../../components/chat/MessagePanel';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Users, Hash, Shield } from 'lucide-react';
+import styled from 'styled-components';
 
 const ChatPage: React.FC = () => {
-    // This component is now very simple. It just reads the ID from the URL.
     const { conversationId } = useParams<{ conversationId?: string }>();
     const activeConversationId = conversationId ? Number(conversationId) : null;
 
     return (
-        <div className="flex h-[calc(100vh-100px)] bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-            <div className="w-1/3 lg:w-1/4 border-r dark:border-gray-700">
-                <ChatSidebar />
-            </div>
+        <PageContainer>
+            <ChatContainer>
+                <SidebarContainer>
+                    <SidebarHeader>
+                        <HeaderIcon>
+                            <MessageSquare size={24} />
+                        </HeaderIcon>
+                        <HeaderContent>
+                            <SidebarTitle>Conversations</SidebarTitle>
+                            <SidebarSubtitle>Chat with your team</SidebarSubtitle>
+                        </HeaderContent>
+                    </SidebarHeader>
+                    <ChatSidebar />
+                </SidebarContainer>
 
-            <div className="w-2/3 lg:w-3/4 flex flex-col">
-                 {activeConversationId ? (
-                    // The key is essential to force MessagePanel to remount and re-connect when the ID changes
-                    <MessagePanel key={activeConversationId} conversationId={activeConversationId} />
-                 ) : (
-                    <div className="flex-grow flex flex-col items-center justify-center text-gray-500 space-y-2">
-                        <MessageSquare size={48} />
-                        <p>Select a conversation to start chatting.</p>
-                    </div>
-                )}
-            </div>
-        </div>
+                <MainPanel>
+                    {activeConversationId ? (
+                        <MessagePanel key={activeConversationId} conversationId={activeConversationId} />
+                    ) : (
+                        <EmptyState>
+                            <EmptyIcon>
+                                <MessageSquare size={64} />
+                            </EmptyIcon>
+                            <EmptyTitle>Welcome to Secure Chat</EmptyTitle>
+                            <EmptyText>
+                                Select a conversation from the sidebar to start messaging with your team members.
+                                All messages are end-to-end encrypted for security.
+                            </EmptyText>
+                            <FeatureList>
+                                <FeatureItem>
+                                    <FeatureIcon style={{ background: 'rgba(46, 151, 197, 0.1)', color: 'rgb(46, 151, 197)' }}>
+                                        <Shield size={18} />
+                                    </FeatureIcon>
+                                    <FeatureContent>
+                                        <FeatureTitle>Secure & Encrypted</FeatureTitle>
+                                        <FeatureDescription>End-to-end encryption for all messages</FeatureDescription>
+                                    </FeatureContent>
+                                </FeatureItem>
+                                <FeatureItem>
+                                    <FeatureIcon style={{ background: 'rgba(150, 129, 158, 0.1)', color: 'rgb(150, 129, 158)' }}>
+                                        <Users size={18} />
+                                    </FeatureIcon>
+                                    <FeatureContent>
+                                        <FeatureTitle>Team Collaboration</FeatureTitle>
+                                        <FeatureDescription>Chat with department members and teams</FeatureDescription>
+                                    </FeatureContent>
+                                </FeatureItem>
+                                <FeatureItem>
+                                    <FeatureIcon style={{ background: 'rgba(229, 151, 54, 0.1)', color: 'rgb(229, 151, 54)' }}>
+                                        <Hash size={18} />
+                                    </FeatureIcon>
+                                    <FeatureContent>
+                                        <FeatureTitle>Document Chat</FeatureTitle>
+                                        <FeatureDescription>Discuss specific documents with context</FeatureDescription>
+                                    </FeatureContent>
+                                </FeatureItem>
+                            </FeatureList>
+                        </EmptyState>
+                    )}
+                </MainPanel>
+            </ChatContainer>
+        </PageContainer>
     );
 };
+
+// Styled Components
+const PageContainer = styled.div`
+    height: calc(100vh - 100px);
+    padding: 1.5rem;
+    animation: fadeInUp 0.4s ease;
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const ChatContainer = styled.div`
+    display: flex;
+    height: 100%;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    box-shadow: 0 8px 32px var(--shadow);
+    overflow: hidden;
+`;
+
+const SidebarContainer = styled.div`
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid rgba(46, 151, 197, 0.2);
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.02), rgba(150, 129, 158, 0.02));
+
+    @media (max-width: 1024px) {
+        width: 280px;
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        display: ${(props: { showOnMobile?: boolean }) => props.showOnMobile ? 'flex' : 'none'};
+    }
+`;
+
+const SidebarHeader = styled.div`
+    padding: 1.5rem;
+    border-bottom: 2px solid rgba(46, 151, 197, 0.2);
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.05), rgba(150, 129, 158, 0.05));
+`;
+
+const HeaderIcon = styled.div`
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 1rem;
+`;
+
+const HeaderContent = styled.div``;
+
+const SidebarTitle = styled.h2`
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const SidebarSubtitle = styled.p`
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    margin-top: 0.25rem;
+`;
+
+const MainPanel = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+`;
+
+const EmptyState = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 3rem;
+    text-align: center;
+`;
+
+const EmptyIcon = styled.div`
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.1), rgba(150, 129, 158, 0.1));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(46, 151, 197);
+    margin-bottom: 1.5rem;
+`;
+
+const EmptyTitle = styled.h3`
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const EmptyText = styled.p`
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 500px;
+    margin-bottom: 2.5rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const FeatureList = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 600px;
+`;
+
+const FeatureItem = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+`;
+
+const FeatureIcon = styled.div`
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+`;
+
+const FeatureContent = styled.div`
+    flex: 1;
+`;
+
+const FeatureTitle = styled.div`
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const FeatureDescription = styled.div`
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-family: 'Poppins', sans-serif;
+`;
 
 export default ChatPage;
