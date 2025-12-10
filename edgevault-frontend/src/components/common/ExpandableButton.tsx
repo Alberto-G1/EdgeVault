@@ -38,7 +38,7 @@ const StyledWrapper = styled.div<{ $bgColor: string; $hoverWidth: string }>`
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    transition-duration: .3s;
+    transition: all 0.3s ease;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
     background-color: ${props => props.$bgColor};
   }
@@ -46,7 +46,7 @@ const StyledWrapper = styled.div<{ $bgColor: string; $hoverWidth: string }>`
   /* icon sign */
   .sign {
     width: 100%;
-    transition-duration: .3s;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -69,14 +69,14 @@ const StyledWrapper = styled.div<{ $bgColor: string; $hoverWidth: string }>`
     color: white;
     font-size: 1.2em;
     font-weight: 600;
-    transition-duration: .3s;
+    transition: all 0.3s ease;
   }
   
   /* hover effect on button width */
   .Btn:hover {
     width: ${props => props.$hoverWidth};
     border-radius: 40px;
-    transition-duration: .3s;
+    transition: all 0.3s ease;
   }
 
   .Btn:hover .sign {

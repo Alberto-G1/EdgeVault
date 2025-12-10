@@ -6,6 +6,7 @@ import { Users, FileText, LogIn, ClipboardCheck, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import styled from 'styled-components';
 import FullPageLoader from '../../components/common/FullPageLoader';
+import WelcomeCard from '../../components/common/WelcomeCard';
 
 const iconMap = {
     "Total Users": <Users className="h-8 w-8" style={{ color: 'var(--light-blue)' }} />,
@@ -42,6 +43,8 @@ const DashboardPage: React.FC = () => {
 
     return (
         <DashboardContainer>
+            <WelcomeCard />
+            
             <DashboardHeader>
                 <h1 className="title">Admin Dashboard</h1>
             </DashboardHeader>
@@ -86,16 +89,15 @@ const DashboardPage: React.FC = () => {
 };
 
 const DashboardContainer = styled.div`
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 40px 20px;
+    width: 100%;
+    padding: 30px;
 
     @media (max-width: 768px) {
-        padding: 30px 15px;
+        padding: 25px 20px;
     }
 
     @media (max-width: 480px) {
-        padding: 20px 10px;
+        padding: 20px 15px;
     }
 `;
 

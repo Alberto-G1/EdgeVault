@@ -2,13 +2,15 @@ import React, { useEffect, useState, useCallback} from 'react';
 import { getAllUserDetails, createUser, updateUser, deleteUser } from '../../api/userService'; // <-- CRITICAL: Use getAllUserDetails
 import type { User } from '../../types/user';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import UserForm from '../../components/admin/UserForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
 import FullPageLoader from '../../components/common/FullPageLoader';
 import HoverButton from '../../components/common/HoverButton';
+import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
+import UserDetailsModal from '../../components/common/UserDetailsModal';
 
 const UserManagementPage: React.FC = () => {
     const { hasPermission, hasAnyPermission } = usePermissions();
@@ -17,6 +19,10 @@ const UserManagementPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<number | null>(null);
+    const [viewDetailsModalOpen, setViewDetailsModalOpen] = useState(false);
+    const [userToView, setUserToView] = useState<User | null>(null);
     
 
     // Wrap fetchUsers in useCallback to make it a stable function
@@ -82,18 +88,34 @@ const UserManagementPage: React.FC = () => {
     };
     
     const handleDeleteUser = async (userId: number) => {
-        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            try {
-                await toast.promise(deleteUser(userId), {
-                    loading: 'Deleting user...',
-                    success: 'User deleted successfully!',
-                    error: (err) => err.response?.data?.message || 'Failed to delete user.',
-                });
-                fetchUsers();
-            } catch (error) {
-                 console.error(error);
-            }
+        setUserToDelete(userId);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (userToDelete === null) return;
+        
+        try {
+            await toast.promise(deleteUser(userToDelete), {
+                loading: 'Deleting user...',
+                success: 'User deleted successfully!',
+                error: (err) => err.response?.data?.message || 'Failed to delete user.',
+            });
+            fetchUsers();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setUserToDelete(null);
         }
+    };
+
+    const handleViewDetails = (user: User) => {
+        setUserToView(user);
+        setViewDetailsModalOpen(true);
+    };
+
+    const getUserInitials = (username: string) => {
+        return username.substring(0, 2).toUpperCase();
     };
 
     if (loading) return <FullPageLoader />;
@@ -105,8 +127,8 @@ const UserManagementPage: React.FC = () => {
                 {hasPermission('USER_CREATE') && (
                     <HoverButton 
                         onClick={() => handleOpenModal()}
-                        firstText="Add User"
-                        secondText={<><Plus size={20} /> New</>}
+                        textOne="Add User"
+                        textTwo="Create New"
                     />
                 )}
             </PageHeader>
@@ -115,6 +137,7 @@ const UserManagementPage: React.FC = () => {
                 <StyledTable>
                     <thead>
                         <tr>
+                            <TableHeader>Profile</TableHeader>
                             <TableHeader>Username</TableHeader>
                             <TableHeader>Email</TableHeader>
                             <TableHeader>Department</TableHeader>
@@ -128,18 +151,39 @@ const UserManagementPage: React.FC = () => {
                     <tbody>
                         {users.map((user) => (
                             <TableRow key={user.id}>
+                                <TableCell>
+                                    <ProfileAvatar>
+                                        {getUserInitials(user.username)}
+                                    </ProfileAvatar>
+                                </TableCell>
                                 <TableCell className="font-medium">{user.username}</TableCell>
                                 <TableCell>{user.email}</TableCell>
-                                <TableCell>{user.departmentName}</TableCell>
+                                <TableCell>{user.departmentName || 'Not assigned'}</TableCell>
                                 <TableCell>
                                     <StatusBadge enabled={user.enabled}>
-                                        {user.enabled ? 'Enabled' : 'Disabled'}
+                                        {user.enabled ? 'Active' : 'Inactive'}
                                     </StatusBadge>
                                 </TableCell>
-                                <TableCell>{(user.roles || []).map(r => r.name).join(', ')}</TableCell>
+                                <TableCell>
+                                    <RolesCell>
+                                        {(user.roles || []).length > 0 ? (
+                                            user.roles.slice(0, 2).map((r, idx) => (
+                                                <RolePill key={idx}>{r.name}</RolePill>
+                                            ))
+                                        ) : (
+                                            <span style={{ color: 'var(--text-secondary)' }}>No roles</span>
+                                        )}
+                                        {user.roles && user.roles.length > 2 && (
+                                            <MoreBadge>+{user.roles.length - 2}</MoreBadge>
+                                        )}
+                                    </RolesCell>
+                                </TableCell>
                                 {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
                                     <TableCell style={{ textAlign: 'right' }}>
                                         <ActionButtons>
+                                            <ActionButton onClick={() => handleViewDetails(user)} className="view">
+                                                <Eye size={18}/>
+                                            </ActionButton>
                                             {hasPermission('USER_UPDATE') && (
                                                 <ActionButton onClick={() => handleOpenModal(user)} className="edit">
                                                     <Edit size={18}/>
@@ -167,22 +211,37 @@ const UserManagementPage: React.FC = () => {
                     isLoading={isSubmitting} 
                 />
             </Modal>
+
+            <DeleteConfirmModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete User"
+                message="Are you sure you want to delete this user? This action cannot be undone and will permanently remove all user data."
+                confirmText="Delete"
+                type="danger"
+            />
+
+            <UserDetailsModal
+                isOpen={viewDetailsModalOpen}
+                onClose={() => setViewDetailsModalOpen(false)}
+                user={userToView}
+            />
         </PageContainer>
     );
 };
 
 const PageContainer = styled.div`
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 40px 20px;
+    width: 100%;
+    padding: 30px;
     font-family: 'Poppins', sans-serif;
 
     @media (max-width: 768px) {
-        padding: 30px 15px;
+        padding: 25px 20px;
     }
 
     @media (max-width: 480px) {
-        padding: 20px 10px;
+        padding: 20px 15px;
     }
 `;
 
@@ -282,7 +341,8 @@ const TableCell = styled.td`
 `;
 
 const StatusBadge = styled.span<{ enabled: boolean }>`
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 6px 14px;
     font-size: 12px;
     font-weight: 600;
@@ -296,43 +356,103 @@ const StatusBadge = styled.span<{ enabled: boolean }>`
     }
 `;
 
+const ProfileAvatar = styled.div`
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--light-blue), var(--purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(46, 151, 197, 0.3);
+
+    @media (max-width: 768px) {
+        width: 36px;
+        height: 36px;
+        font-size: 12px;
+    }
+`;
+
+const RolesCell = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+`;
+
+const RolePill = styled.span`
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: var(--orange);
+    color: white;
+`;
+
+const MoreBadge = styled.span`
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 10px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+`;
+
 const ActionButtons = styled.div`
     display: flex;
-    gap: 12px;
+    gap: 8px;
     justify-content: flex-end;
 
     @media (max-width: 768px) {
-        gap: 8px;
+        gap: 6px;
     }
 `;
 
 const ActionButton = styled.button`
-    padding: 8px;
+    padding: 10px;
     border: none;
     background: transparent;
     cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    border-radius: 10px;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary);
 
-    &.edit {
-        color: var(--light-blue);
-
+    &.view {
         &:hover {
             background: var(--light-blue);
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 151, 197, 0.3);
+        }
+    }
+
+    &.edit {
+        &:hover {
+            background: var(--purple);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(150, 129, 158, 0.3);
         }
     }
 
     &.delete {
-        color: var(--danger);
-
         &:hover {
             background: var(--danger);
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
+    }
+
+    @media (max-width: 768px) {
+        padding: 8px;
     }
 `;
 
