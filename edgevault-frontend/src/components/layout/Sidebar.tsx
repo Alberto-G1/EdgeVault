@@ -2,96 +2,218 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import styled from 'styled-components';
 
 const Sidebar: React.FC = () => {
     const { hasAnyPermission } = usePermissions();
-    const linkClasses = "flex items-center p-3 my-1 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200";
-    const activeLinkClasses = "bg-cyan-600 text-white";
 
     return (
-        <aside className="w-64 h-screen bg-gray-900 text-white flex flex-col flex-shrink-0">
-            <div className="flex items-center justify-center p-5 border-b border-gray-700">
-                 <img src="/logo.png" alt="EdgeVault Logo" className="w-40" />
-            </div>
-            <nav className="flex-grow p-4">
-                <NavLink
-                    to="/admin/dashboard"
-                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                >
-                    <LayoutDashboard className="w-5 h-5 mr-3" />
-                    Dashboard
-                </NavLink>
+        <SidebarContainer>
+            <LogoSection>
+                <img src="/logo.png" alt="EdgeVault Logo" className="logo-image" />
+            </LogoSection>
+            
+            <SidebarNav>
+                <NavItem to="/admin/dashboard">
+                    {({ isActive }) => (
+                        <NavContent className={isActive ? 'active' : ''}>
+                            <LayoutDashboard size={20} />
+                            <span>Dashboard</span>
+                        </NavContent>
+                    )}
+                </NavItem>
 
                 {hasAnyPermission(['USER_READ', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE']) && (
-                    <NavLink
-                        to="/admin/users"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <Users className="w-5 h-5 mr-3" />
-                        User Management
-                    </NavLink>
+                    <NavItem to="/admin/users">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <Users size={20} />
+                                <span>User Management</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
 
                 {hasAnyPermission(['ROLE_READ', 'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE']) && (
-                    <NavLink
-                        to="/admin/roles"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <Shield className="w-5 h-5 mr-3" />
-                        Role Management
-                    </NavLink>
+                    <NavItem to="/admin/roles">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <Shield size={20} />
+                                <span>Role Management</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
 
                 {hasAnyPermission(['DEPARTMENT_READ', 'DEPARTMENT_CREATE', 'DEPARTMENT_UPDATE', 'DEPARTMENT_DELETE']) && (
-                     <NavLink
-                        to="/admin/departments"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <Building className="w-5 h-5 mr-3" />
-                        Departments
-                    </NavLink>
+                    <NavItem to="/admin/departments">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <Building size={20} />
+                                <span>Departments</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
+                
                 {hasAnyPermission(['DOCUMENT_READ', 'DOCUMENT_CREATE', 'DOCUMENT_UPDATE', 'DOCUMENT_DELETE']) && (
-                    <NavLink
-                        to="/admin/documents"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <FileText className="w-5 h-5 mr-3" />
-                        Documents
-                    </NavLink>
+                    <NavItem to="/admin/documents">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <FileText size={20} />
+                                <span>Documents</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
+                
                 {hasAnyPermission(['DOCUMENT_APPROVAL']) && (
-                    <NavLink
-                        to="/admin/approvals"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <ClipboardCheck className="w-5 h-5 mr-3" />
-                        Approval Queue
-                    </NavLink>
+                    <NavItem to="/admin/approvals">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <ClipboardCheck size={20} />
+                                <span>Approval Queue</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
-                <NavLink
-                    to="/admin/chat"
-                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                >
-                    <MessageSquare className="w-5 h-5 mr-3" />
-                    Chat
-                </NavLink>
+                
+                <NavItem to="/admin/chat">
+                    {({ isActive }) => (
+                        <NavContent className={isActive ? 'active' : ''}>
+                            <MessageSquare size={20} />
+                            <span>Chat</span>
+                        </NavContent>
+                    )}
+                </NavItem>
                 
                 {hasAnyPermission(['AUDIT_READ']) && (
-                    <NavLink
-                        to="/admin/audit-logs"
-                        className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-                    >
-                        <History className="w-5 h-5 mr-3" />
-                        Audit Logs
-                    </NavLink>
+                    <NavItem to="/admin/audit-logs">
+                        {({ isActive }) => (
+                            <NavContent className={isActive ? 'active' : ''}>
+                                <History size={20} />
+                                <span>Audit Logs</span>
+                            </NavContent>
+                        )}
+                    </NavItem>
                 )}
-            </nav>
-            <div className="p-4 border-t border-gray-700 text-center text-xs text-gray-500">
-                EdgeVault v1.0.0
-            </div>
-        </aside>
+            </SidebarNav>
+            
+            <SidebarFooter>
+                <div>EdgeVault</div>
+                <Version>v1.0.0</Version>
+            </SidebarFooter>
+        </SidebarContainer>
     );
 };
+
+const SidebarContainer = styled.aside`
+    background-color: var(--sidebar-bg);
+    width: 280px;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    font-family: 'Poppins', sans-serif;
+
+    @media (max-width: 1100px) {
+        width: 70px;
+    }
+
+    @media (max-width: 576px) {
+        display: none;
+    }
+`;
+
+const LogoSection = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+
+    .logo-image {
+        width: 160px;
+        height: auto;
+        object-fit: contain;
+
+        @media (max-width: 1100px) {
+            width: 40px;
+        }
+    }
+`;
+
+const SidebarNav = styled.nav`
+    flex-grow: 1;
+    padding: 20px;
+    list-style: none;
+
+    @media (max-width: 1100px) {
+        padding: 20px 10px;
+    }
+`;
+
+const NavItem = styled(NavLink)`
+    display: block;
+    margin-bottom: 5px;
+    text-decoration: none;
+`;
+
+const NavContent = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 15px;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+
+    svg {
+        flex-shrink: 0;
+    }
+
+    &:hover {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+    }
+
+    &.active {
+        background-color: var(--bg-primary);
+        color: var(--light-blue);
+        border-left: 3px solid var(--light-blue);
+    }
+
+    @media (max-width: 1100px) {
+        justify-content: center;
+        padding: 15px;
+
+        span {
+            display: none;
+        }
+    }
+`;
+
+const SidebarFooter = styled.div`
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+
+    @media (max-width: 1100px) {
+        div:first-child {
+            display: none;
+        }
+    }
+`;
+
+const Version = styled.div`
+    margin-top: 5px;
+    color: var(--light-blue);
+    font-weight: 600;
+`;
 
 export default Sidebar;
