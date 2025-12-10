@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { getMyDepartmentDocuments, uploadDocument, requestDocumentDeletion } from '../../api/documentService';
 import type { Document } from '../../types/document';
 import { toast } from 'react-hot-toast';
-import { Upload, FileText, Trash2 } from 'lucide-react';
+import { Upload, FileText, Trash2, Search, Filter, Clock, User, FileUp, Eye } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import styled from 'styled-components';
+import Loader from '../../components/common/Loader';
+import HoverButton from '../../components/common/HoverButton';
 import Modal from '../../components/common/Modal';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
@@ -12,8 +15,10 @@ const DocumentManagementPage: React.FC = () => {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'recent' | 'title'>('recent');
+    const [filterBy, setFilterBy] = useState<'all' | 'mine'>('all');
     
-    // State for upload form
     const [uploadTitle, setUploadTitle] = useState('');
     const [uploadDescription, setUploadDescription] = useState('');
     const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -51,7 +56,6 @@ const DocumentManagementPage: React.FC = () => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setFileToUpload(file);
-            // Pre-fill title with filename (without extension) if title is empty
             if (uploadTitle === '') {
                 const fileName = file.name;
                 const lastDot = fileName.lastIndexOf('.');
@@ -83,7 +87,8 @@ const DocumentManagementPage: React.FC = () => {
         }
     };
 
-    const handleOpenConfirmModal = (docId: number) => {
+    const handleOpenConfirmModal = (docId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
         setDocumentToDelete(docId);
         setIsConfirmModalOpen(true);
     };
@@ -112,95 +117,282 @@ const DocumentManagementPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="text-center p-8">Loading documents...</div>;
+    const filteredDocuments = documents
+        .filter(doc => 
+            doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .filter(doc => {
+            if (filterBy === 'mine') {
+                return doc.latestVersion.uploaderUsername === 'currentUser'; // You'd need current user context
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'recent') {
+                return new Date(b.latestVersion.uploadTimestamp).getTime() - 
+                       new Date(a.latestVersion.uploadTimestamp).getTime();
+            }
+            return a.title.localeCompare(b.title);
+        });
+
+    const getDocColor = (index: number) => {
+        const colors = [
+            { bg: 'rgba(46, 151, 197, 0.1)', border: 'rgba(46, 151, 197, 0.3)', icon: 'linear-gradient(135deg, rgb(46, 151, 197), rgb(36, 121, 167))', text: 'rgb(46, 151, 197)' },
+            { bg: 'rgba(150, 129, 158, 0.1)', border: 'rgba(150, 129, 158, 0.3)', icon: 'linear-gradient(135deg, rgb(150, 129, 158), rgb(120, 99, 128))', text: 'rgb(150, 129, 158)' },
+            { bg: 'rgba(229, 151, 54, 0.1)', border: 'rgba(229, 151, 54, 0.3)', icon: 'linear-gradient(135deg, rgb(229, 151, 54), rgb(199, 121, 24))', text: 'rgb(229, 151, 54)' },
+            { bg: 'rgba(46, 151, 197, 0.08)', border: 'rgba(46, 151, 197, 0.25)', icon: 'linear-gradient(135deg, rgb(70, 180, 230), rgb(46, 151, 197))', text: 'rgb(70, 180, 230)' }
+        ];
+        return colors[index % colors.length];
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    if (loading) {
+        return (
+            <LoaderContainer>
+                <Loader />
+            </LoaderContainer>
+        );
+    }
 
     return (
-        <div className="container mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Document Management</h1>
+        <PageContainer>
+            <PageHeader>
+                <HeaderContent>
+                    <PageTitle>
+                        <FileText size={32} />
+                        Document Management
+                    </PageTitle>
+                    <PageSubtitle>Manage department documents and files</PageSubtitle>
+                </HeaderContent>
+                
                 {hasPermission('DOCUMENT_CREATE') && (
-                    <button onClick={() => setIsUploadModalOpen(true)} className="btn-primary flex items-center">
-                        <Upload size={20} className="mr-2" />
-                        Upload Document
-                    </button>
+                    <UploadButton 
+                        onClick={() => setIsUploadModalOpen(true)}
+                        textOne="Upload Document"
+                        textTwo="Upload File"
+                        width="200px"
+                        height="55px"
+                    />
                 )}
-            </div>
+            </PageHeader>
 
-            {documents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {documents.map(doc => (
-                        <div 
+            <ControlsContainer>
+                <SearchContainer>
+                    <SearchIcon>
+                        <Search size={20} />
+                    </SearchIcon>
+                    <SearchInput
+                        type="text"
+                        placeholder="Search documents by title or description..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </SearchContainer>
+                
+                <FilterGroup>
+                    <FilterSelect value={sortBy} onChange={(e) => setSortBy(e.target.value as 'recent' | 'title')}>
+                        <option value="recent">Sort by Recent</option>
+                        <option value="title">Sort by Title</option>
+                    </FilterSelect>
+                    
+                    <FilterSelect value={filterBy} onChange={(e) => setFilterBy(e.target.value as 'all' | 'mine')}>
+                        <option value="all">All Documents</option>
+                        <option value="mine">My Documents</option>
+                    </FilterSelect>
+                </FilterGroup>
+            </ControlsContainer>
+
+            <StatsContainer>
+                <StatCard style={{ background: 'rgba(46, 151, 197, 0.05)', borderColor: 'rgba(46, 151, 197, 0.2)' }}>
+                    <StatIcon style={{ background: 'rgba(46, 151, 197, 0.1)', color: 'rgb(46, 151, 197)' }}>
+                        <FileText size={24} />
+                    </StatIcon>
+                    <StatContent>
+                        <StatLabel>Total Documents</StatLabel>
+                        <StatValue>{documents.length}</StatValue>
+                    </StatContent>
+                </StatCard>
+                
+                <StatCard style={{ background: 'rgba(150, 129, 158, 0.05)', borderColor: 'rgba(150, 129, 158, 0.2)' }}>
+                    <StatIcon style={{ background: 'rgba(150, 129, 158, 0.1)', color: 'rgb(150, 129, 158)' }}>
+                        <Clock size={24} />
+                    </StatIcon>
+                    <StatContent>
+                        <StatLabel>Last Updated</StatLabel>
+                        <StatValue>
+                            {documents.length > 0 
+                                ? new Date(documents[0].latestVersion.uploadTimestamp).toLocaleDateString()
+                                : 'Never'
+                            }
+                        </StatValue>
+                    </StatContent>
+                </StatCard>
+            </StatsContainer>
+
+            <DocumentGrid>
+                {filteredDocuments.map((doc, index) => {
+                    const colors = getDocColor(index);
+                    
+                    return (
+                        <DocumentCard 
                             key={doc.id} 
                             onClick={() => navigate(`/admin/documents/${doc.id}`)}
-                            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md flex flex-col justify-between group relative cursor-pointer transition-transform transform hover:-translate-y-1"
+                            style={{ borderColor: colors.border, background: colors.bg }}
                         >
-                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DocHeader>
+                                <DocIcon style={{ background: colors.icon }}>
+                                    <FileText size={24} />
+                                </DocIcon>
+                                <DocInfo>
+                                    <DocTitle style={{ color: colors.icon.includes('06b6d4') ? '#06b6d4' : '#0ea5e9' }}>
+                                        {doc.title}
+                                    </DocTitle>
+                                    <DocVersion>
+                                        Version {doc.latestVersion.versionNumber}
+                                    </DocVersion>
+                                </DocInfo>
+                                
                                 {hasPermission('DOCUMENT_DELETE') && (
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation(); 
-                                            handleOpenConfirmModal(doc.id);
-                                        }} 
-                                        className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                                    <DeleteButton 
+                                        onClick={(e) => handleOpenConfirmModal(doc.id, e)}
                                         title="Request Deletion"
                                     >
-                                        <Trash2 size={18}/>
-                                    </button>
+                                        <Trash2 size={18} />
+                                    </DeleteButton>
                                 )}
-                            </div>
+                            </DocHeader>
+                            
+                            <DocDescription>
+                                {doc.description || 'No description provided'}
+                            </DocDescription>
+                            
+                            <DocMeta>
+                                <MetaItem>
+                                    <User size={14} />
+                                    <span>By {doc.latestVersion.uploaderUsername}</span>
+                                </MetaItem>
+                                <MetaItem>
+                                    <Clock size={14} />
+                                    <span>{new Date(doc.latestVersion.uploadTimestamp).toLocaleDateString()}</span>
+                                </MetaItem>
+                                {doc.fileSize && (
+                                    <MetaItem>
+                                        <FileUp size={14} />
+                                        <span>{formatFileSize(doc.fileSize)}</span>
+                                    </MetaItem>
+                                )}
+                            </DocMeta>
+                            
+                            <DocActions>
+                                <ViewButton onClick={() => navigate(`/admin/documents/${doc.id}`)}>
+                                    <Eye size={16} />
+                                    View Details
+                                </ViewButton>
+                            </DocActions>
+                        </DocumentCard>
+                    );
+                })}
+            </DocumentGrid>
 
-                            <div className="flex-grow">
-                                <FileText size={40} className="text-cyan-500 mb-2"/>
-                                <h3 className="font-bold text-gray-800 dark:text-gray-100 break-words group-hover:text-cyan-500 transition-colors">
-                                    {doc.title}
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Version: {doc.latestVersion.versionNumber}
-                                </p>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-4 pt-2 border-t dark:border-gray-700">
-                                <p>Last updated by {doc.latestVersion.uploaderUsername}</p>
-                                <p>{new Date(doc.latestVersion.uploadTimestamp).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                    <FileText size={48} className="mx-auto text-gray-400"/>
-                    <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">No Documents Found</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by uploading a new document.</p>
-                </div>
+            {filteredDocuments.length === 0 && (
+                <EmptyState>
+                    <EmptyIcon>
+                        <FileText size={48} />
+                    </EmptyIcon>
+                    <EmptyText>
+                        {searchQuery ? 'No documents found matching your search' : 'No documents found'}
+                    </EmptyText>
+                    <EmptySubtext>
+                        {searchQuery 
+                            ? 'Try a different search term or clear the search'
+                            : hasPermission('DOCUMENT_CREATE') 
+                                ? 'Click "Upload Document" to add your first document'
+                                : 'No documents available in your department'
+                        }
+                    </EmptySubtext>
+                </EmptyState>
             )}
-            
-            <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); resetUploadForm(); }} title="Upload New Document">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Document Title</label>
-                        <input type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="mt-1 input-style" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
-                        <textarea value={uploadDescription} onChange={(e) => setUploadDescription(e.target.value)} rows={3} className="mt-1 input-style" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">File</label>
-                        <input type="file" onChange={handleFileSelect} className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" required />
-                    </div>
-                    
-                    {fileToUpload && (
-                        <p className="text-sm text-center font-medium text-gray-700 dark:text-gray-300">
-                            Selected file: <span className="text-cyan-600">{fileToUpload.name}</span>
-                        </p>
-                    )}
 
-                    <div className="flex justify-end pt-4">
-                         <button onClick={() => { setIsUploadModalOpen(false); resetUploadForm(); }} type="button" className="btn-secondary mr-3">Cancel</button>
-                        <button onClick={handleUpload} disabled={isUploading || !fileToUpload || !uploadTitle.trim()} className="btn-primary">
-                            {isUploading ? 'Uploading...' : 'Upload'}
-                        </button>
-                    </div>
-                </div>
+            <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); resetUploadForm(); }} title="Upload New Document">
+                <ModalContent>
+                    <FormGroup>
+                        <Label>
+                            <LabelIcon style={{ background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4' }}>
+                                <FileText size={16} />
+                            </LabelIcon>
+                            Document Title
+                        </Label>
+                        <Input
+                            type="text"
+                            value={uploadTitle}
+                            onChange={(e) => setUploadTitle(e.target.value)}
+                            placeholder="Enter document title"
+                            required
+                            style={{ borderLeft: '4px solid #06b6d4' }}
+                        />
+                    </FormGroup>
+                    
+                    <FormGroup>
+                        <Label>
+                            <LabelIcon style={{ background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' }}>
+                                <FileText size={16} />
+                            </LabelIcon>
+                            Description (Optional)
+                        </Label>
+                        <TextArea
+                            value={uploadDescription}
+                            onChange={(e) => setUploadDescription(e.target.value)}
+                            rows={3}
+                            placeholder="Add a description for this document..."
+                        />
+                    </FormGroup>
+                    
+                    <FormGroup>
+                        <Label>
+                            <LabelIcon style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
+                                <Upload size={16} />
+                            </LabelIcon>
+                            Select File
+                        </Label>
+                        <FileUploadContainer>
+                            <FileUploadLabel htmlFor="file-upload">
+                                <Upload size={32} />
+                                <UploadText>Click to upload or drag and drop</UploadText>
+                                <UploadHint>PDF, DOC, DOCX, TXT up to 50MB</UploadHint>
+                            </FileUploadLabel>
+                            <FileInput
+                                id="file-upload"
+                                type="file"
+                                onChange={handleFileSelect}
+                                required
+                            />
+                        </FileUploadContainer>
+                        
+                        {fileToUpload && (
+                            <SelectedFile>
+                                <FileText size={16} />
+                                {fileToUpload.name} ({formatFileSize(fileToUpload.size)})
+                            </SelectedFile>
+                        )}
+                    </FormGroup>
+                    
+                    <ModalActions>
+                        <CancelButton type="button" onClick={() => { setIsUploadModalOpen(false); resetUploadForm(); }}>
+                            Cancel
+                        </CancelButton>
+                        <UploadButton type="button" onClick={handleUpload} disabled={isUploading || !fileToUpload || !uploadTitle.trim()}>
+                            {isUploading ? 'Uploading...' : 'Upload Document'}
+                        </UploadButton>
+                    </ModalActions>
+                </ModalContent>
             </Modal>
 
             <ConfirmationModal
@@ -212,8 +404,571 @@ const DocumentManagementPage: React.FC = () => {
                 confirmText="Request Deletion"
                 isConfirming={isDeleting}
             />
-        </div>
+        </PageContainer>
     );
 };
+
+// Styled Components
+const PageContainer = styled.div`
+    animation: fadeInUp 0.4s ease;
+    padding: 2rem;
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const LoaderContainer = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+`;
+
+const PageHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.05), rgba(150, 129, 158, 0.05));
+    border-radius: 20px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: stretch;
+        padding: 1rem;
+    }
+`;
+
+const HeaderContent = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+`;
+
+const PageTitle = styled.h1`
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        font-size: 1.5rem;
+    }
+`;
+
+const PageSubtitle = styled.p`
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    margin-left: 3.5rem;
+
+    @media (max-width: 768px) {
+        margin-left: 0;
+    }
+`;
+
+const UploadButton = styled(HoverButton)`
+    @media (max-width: 768px) {
+        width: 100% !important;
+    }
+`;
+
+const ControlsContainer = styled.div`
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    box-shadow: 0 4px 12px var(--shadow);
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
+`;
+
+const SearchContainer = styled.div`
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+`;
+
+const SearchIcon = styled.div`
+    position: absolute;
+    left: 1rem;
+    color: var(--text-tertiary);
+`;
+
+const SearchInput = styled.input`
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+
+    &::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: rgb(46, 151, 197);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+`;
+
+const FilterGroup = styled.div`
+    display: flex;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
+`;
+
+const FilterSelect = styled.select`
+    padding: 0.875rem 1rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 160px;
+
+    &:focus {
+        outline: none;
+        border-color: rgb(46, 151, 197);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+
+    option {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+`;
+
+const StatsContainer = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+`;
+
+const StatCard = styled.div`
+    padding: 1.25rem;
+    border: 2px solid;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+`;
+
+const StatIcon = styled.div`
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+
+const StatContent = styled.div`
+    flex: 1;
+`;
+
+const StatLabel = styled.div`
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const StatValue = styled.div`
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const DocumentGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+`;
+
+const DocumentCard = styled.div`
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px var(--shadow);
+    transition: all 0.3s ease;
+    border: 2px solid;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px var(--shadow);
+    }
+`;
+
+const DocHeader = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+`;
+
+const DocIcon = styled.div`
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+`;
+
+const DocInfo = styled.div`
+    flex: 1;
+    overflow: hidden;
+`;
+
+const DocTitle = styled.h3`
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    font-family: 'Poppins', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+
+const DocVersion = styled.div`
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const DeleteButton = styled.button`
+    width: 40px;
+    height: 40px;
+    background: var(--bg-secondary);
+    border: 2px solid rgba(239, 68, 68, 0.2);
+    border-radius: 10px;
+    color: #EF4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        transform: scale(1.1);
+    }
+`;
+
+const DocDescription = styled.p`
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+`;
+
+const DocMeta = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background: rgba(46, 151, 197, 0.05);
+    border-radius: 10px;
+`;
+
+const MetaItem = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+`;
+
+const DocActions = styled.div`
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+`;
+
+const ViewButton = styled.button`
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.3);
+    color: rgb(46, 151, 197);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--shadow);
+    }
+`;
+
+const EmptyState = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    border: 2px dashed rgba(46, 151, 197, 0.2);
+    text-align: center;
+`;
+
+const EmptyIcon = styled.div`
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(46, 151, 197, 0.1), rgba(150, 129, 158, 0.1));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(46, 151, 197);
+    margin-bottom: 1.5rem;
+`;
+
+const EmptyText = styled.h3`
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const EmptySubtext = styled.p`
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const ModalContent = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+`;
+
+const FormGroup = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+`;
+
+const Label = styled.label`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const LabelIcon = styled.span`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+`;
+
+const Input = styled.input`
+    width: 100%;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+
+    &::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: rgb(46, 151, 197);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+`;
+
+const TextArea = styled.textarea`
+    width: 100%;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+    resize: vertical;
+
+    &::placeholder {
+        color: var(--text-tertiary);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: rgb(46, 151, 197);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+`;
+
+const FileUploadContainer = styled.div`
+    position: relative;
+    width: 100%;
+`;
+
+const FileUploadLabel = styled.label`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 160px;
+    border: 2px dashed rgba(46, 151, 197, 0.3);
+    border-radius: 12px;
+    background: rgba(46, 151, 197, 0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        border-color: rgb(46, 151, 197);
+    }
+`;
+
+const UploadText = styled.p`
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 1rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const UploadHint = styled.p`
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-family: 'Poppins', sans-serif;
+`;
+
+const FileInput = styled.input`
+    display: none;
+`;
+
+const SelectedFile = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(46, 151, 197, 0.1);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: rgb(46, 151, 197);
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+    margin-top: 0.75rem;
+`;
+
+const ModalActions = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+`;
+
+const CancelButton = styled.button`
+    padding: 0.875rem 1.75rem;
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.3);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    color: rgb(46, 151, 197);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 151, 197, 0.15);
+    }
+`;
 
 export default DocumentManagementPage;
