@@ -32,6 +32,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return savedFlag ? JSON.parse(savedFlag) : false;
     });
 
+    // Define logout before useEffect so it can be used there
+    const logout = useCallback(() => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userPermissions');
+        localStorage.removeItem('passwordChangeRequired');
+        setToken(null);
+        setUser(null);
+        setPermissions(new Set());
+        setPasswordChangeRequired(false);
+    }, []);
+
     useEffect(() => {
         if (token) {
             try {
@@ -49,23 +60,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Ensure user is null if token is null
             setUser(null);
         }
-    }, [token]);
+    }, [token, logout]);
 
     const login = (newToken: string, newPermissions: string[], newPasswordChangeRequired: boolean) => {
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('userPermissions', JSON.stringify(newPermissions));
-        localStorage.setItem('passwordChangeRequired', JSON.stringify(newPasswordChangeRequired));
+        localStorage.setItem('passwordChangeRequired', JSON.stringify(newPermissions));
         setToken(newToken);
         setPermissions(new Set(newPermissions));
         setPasswordChangeRequired(newPasswordChangeRequired);
-    };
-
-    const logout = () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userPermissions');
-        setToken(null);
-        setUser(null);
-        setPermissions(new Set());
     };
     
     // New function to update state after a successful password change

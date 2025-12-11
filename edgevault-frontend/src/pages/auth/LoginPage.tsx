@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
 import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../hooks/useTheme';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
@@ -13,6 +14,7 @@ const LoginPage: React.FC = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
+    const { mode } = useTheme();
     const navigate = useNavigate();
     const { showSuccess, showError } = useToast();
 
@@ -35,14 +37,14 @@ const LoginPage: React.FC = () => {
 
     if (loading) {
         return (
-            <LoaderContainer>
+            <LoaderContainer $mode={mode}>
                 <Loader />
             </LoaderContainer>
         );
     }
 
     return (
-        <LoginContainer>
+        <LoginContainer $mode={mode}>
             <StyledWrapper>
                 <div className="container">
                     <div className="logo-container">
@@ -113,7 +115,7 @@ const LoginPage: React.FC = () => {
                         </div>
                     </div>
                     <span className="agreement">
-                        <a href="#">Learn user licence agreement</a>
+                        <Link to="/">Learn user licence agreement</Link>
                     </span>
                 </div>
             </StyledWrapper>
@@ -121,24 +123,83 @@ const LoginPage: React.FC = () => {
     );
 };
 
-const LoaderContainer = styled.div`
+const LoaderContainer = styled.div<{ $mode: 'light' | 'dark' }>`
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    background: ${props => 
+        props.$mode === 'dark' 
+            ? `url('/login-darkmode-background (1).jpeg')` 
+            : `url('/login-lightmode-background (1).jpeg')`
+    };
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    position: relative;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: ${props => 
+            props.$mode === 'dark'
+                ? 'rgba(0, 0, 0, 0.4)'
+                : 'rgba(255, 255, 255, 0.3)'
+        };
+        z-index: 1;
+    }
+    
+    > * {
+        position: relative;
+        z-index: 2;
+    }
 `;
 
-const LoginContainer = styled.div`
+const LoginContainer = styled.div<{ $mode: 'light' | 'dark' }>`
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    background: ${props => 
+        props.$mode === 'dark' 
+            ? `url('/login-darkmode-background (1).jpeg')` 
+            : `url('/login-lightmode-background (1).jpeg')`
+    };
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     padding: 20px;
+    position: relative;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: ${props => 
+            props.$mode === 'dark'
+                ? 'rgba(0, 0, 0, 0.4)'
+                : 'rgba(255, 255, 255, 0.3)'
+        };
+        z-index: 1;
+    }
+    
+    > * {
+        position: relative;
+        z-index: 2;
+    }
 
     @media (max-width: 768px) {
         padding: 10px;
+        background-attachment: scroll;
     }
 `;
 
@@ -151,11 +212,13 @@ const StyledWrapper = styled.div`
         max-width: 650px;
         height: auto;
         min-height: 850px;
-        background: var(--bg-secondary);
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border-radius: 40px;
         padding: 50px 60px;
-        border: 5px solid var(--border-color);
-        box-shadow: 0 30px 60px var(--shadow);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         margin: 0 auto;
         display: flex;
         flex-direction: column;
