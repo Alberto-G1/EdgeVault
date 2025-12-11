@@ -1,11 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { getTotalUnreadCount } from '../../api/chatService';
 import styled from 'styled-components';
 
 const Sidebar: React.FC = () => {
     const { hasAnyPermission } = usePermissions();
+    const [totalUnreadCount, setTotalUnreadCount] = useState<number>(0);
+
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const count = await getTotalUnreadCount();
+                setTotalUnreadCount(count);
+            } catch (error) {
+                console.error('Failed to fetch unread count:', error);
+            }
+        };
+
+        fetchUnreadCount();
+        
+        // Refresh every 10 seconds
+        const interval = setInterval(fetchUnreadCount, 10000);
+        
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <SidebarContainer>
@@ -83,6 +103,9 @@ const Sidebar: React.FC = () => {
                         <NavContent className={isActive ? 'active' : ''}>
                             <MessageSquare size={20} />
                             <span>Chat</span>
+                            {totalUnreadCount > 0 && (
+                                <TotalUnreadBadge>{totalUnreadCount}</TotalUnreadBadge>
+                            )}
                         </NavContent>
                     )}
                 </NavItem>
@@ -170,6 +193,7 @@ const NavContent = styled.div`
     font-weight: 500;
     transition: all 0.2s;
     cursor: pointer;
+    position: relative;
 
     svg {
         flex-shrink: 0;
@@ -214,6 +238,43 @@ const Version = styled.div`
     margin-top: 5px;
     color: var(--light-blue);
     font-weight: 600;
+`;
+
+const TotalUnreadBadge = styled.div`
+    margin-left: auto;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 12px;
+    min-width: 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    animation: pulseBadge 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+
+    @keyframes pulseBadge {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+    }
+    
+    @media (max-width: 1100px) {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        margin-left: 0;
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        min-width: 20px;
+    }
 `;
 
 export default Sidebar;

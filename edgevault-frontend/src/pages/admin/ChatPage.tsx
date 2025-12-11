@@ -1,31 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ChatSidebar from '../../components/chat/ChatSidebar';
 import MessagePanel from '../../components/chat/MessagePanel';
-import { MessageSquare, Users, Hash, Shield } from 'lucide-react';
+import { MessageSquare, Users, Hash, Shield, Menu, X } from 'lucide-react';
 import styled from 'styled-components';
 
 const ChatPage: React.FC = () => {
     const { conversationId } = useParams<{ conversationId?: string }>();
     const activeConversationId = conversationId ? Number(conversationId) : null;
+    const [showSidebar, setShowSidebar] = useState(false);
 
     return (
         <PageContainer>
             <ChatContainer>
-                <SidebarContainer>
-                    <SidebarHeader>
-                        <HeaderIcon>
-                            <MessageSquare size={24} />
-                        </HeaderIcon>
-                        <HeaderContent>
-                            <SidebarTitle>Conversations</SidebarTitle>
-                            <SidebarSubtitle>Chat with your team</SidebarSubtitle>
-                        </HeaderContent>
-                    </SidebarHeader>
+                {/* Mobile Header */}
+                <MobileHeader>
+                    <MobileHeaderButton onClick={() => setShowSidebar(!showSidebar)}>
+                        {showSidebar ? <X size={24} /> : <Menu size={24} />}
+                    </MobileHeaderButton>
+                    <MobileHeaderTitle>
+                        <MessageSquare size={20} />
+                        <span>EdgeVault Chat</span>
+                    </MobileHeaderTitle>
+                </MobileHeader>
+
+                <SidebarContainer showOnMobile={showSidebar}>
                     <ChatSidebar />
                 </SidebarContainer>
 
-                <MainPanel>
+                <MainPanel showOnMobile={!showSidebar}>
                     {activeConversationId ? (
                         <MessagePanel key={activeConversationId} conversationId={activeConversationId} />
                     ) : (
@@ -36,7 +39,7 @@ const ChatPage: React.FC = () => {
                             <EmptyTitle>Welcome to Secure Chat</EmptyTitle>
                             <EmptyText>
                                 Select a conversation from the sidebar to start messaging with your team members.
-                                All messages are end-to-end encrypted for security.
+                                All messages are secure and encrypted.
                             </EmptyText>
                             <FeatureList>
                                 <FeatureItem>
@@ -45,7 +48,7 @@ const ChatPage: React.FC = () => {
                                     </FeatureIcon>
                                     <FeatureContent>
                                         <FeatureTitle>Secure & Encrypted</FeatureTitle>
-                                        <FeatureDescription>End-to-end encryption for all messages</FeatureDescription>
+                                        <FeatureDescription>Professional enterprise security</FeatureDescription>
                                     </FeatureContent>
                                 </FeatureItem>
                                 <FeatureItem>
@@ -54,7 +57,7 @@ const ChatPage: React.FC = () => {
                                     </FeatureIcon>
                                     <FeatureContent>
                                         <FeatureTitle>Team Collaboration</FeatureTitle>
-                                        <FeatureDescription>Chat with department members and teams</FeatureDescription>
+                                        <FeatureDescription>Group and direct messaging</FeatureDescription>
                                     </FeatureContent>
                                 </FeatureItem>
                                 <FeatureItem>
@@ -62,8 +65,8 @@ const ChatPage: React.FC = () => {
                                         <Hash size={18} />
                                     </FeatureIcon>
                                     <FeatureContent>
-                                        <FeatureTitle>Document Chat</FeatureTitle>
-                                        <FeatureDescription>Discuss specific documents with context</FeatureDescription>
+                                        <FeatureTitle>Real-time Updates</FeatureTitle>
+                                        <FeatureDescription>Instant message delivery</FeatureDescription>
                                     </FeatureContent>
                                 </FeatureItem>
                             </FeatureList>
@@ -103,7 +106,47 @@ const ChatContainer = styled.div`
     overflow: hidden;
 `;
 
-const SidebarContainer = styled.div`
+const MobileHeader = styled.div`
+    display: none;
+    
+    @media (max-width: 768px) {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-bottom: 2px solid rgba(46, 151, 197, 0.2);
+        background: linear-gradient(135deg, rgba(46, 151, 197, 0.05), rgba(150, 129, 158, 0.05));
+    }
+`;
+
+const MobileHeaderButton = styled.button`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: var(--hover-color);
+    }
+`;
+
+const MobileHeaderTitle = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+`;
+
+const SidebarContainer = styled.div<{ showOnMobile?: boolean }>`
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -115,50 +158,26 @@ const SidebarContainer = styled.div`
     }
 
     @media (max-width: 768px) {
+        position: absolute;
+        top: 65px;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
-        display: ${(props: { showOnMobile?: boolean }) => props.showOnMobile ? 'flex' : 'none'};
+        z-index: 10;
+        display: ${props => props.showOnMobile ? 'flex' : 'none'};
     }
 `;
 
-const SidebarHeader = styled.div`
-    padding: 1.5rem;
-    border-bottom: 2px solid rgba(46, 151, 197, 0.2);
-    background: linear-gradient(135deg, rgba(46, 151, 197, 0.05), rgba(150, 129, 158, 0.05));
-`;
-
-const HeaderIcon = styled.div`
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158));
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    margin-bottom: 1rem;
-`;
-
-const HeaderContent = styled.div``;
-
-const SidebarTitle = styled.h2`
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    font-family: 'Poppins', sans-serif;
-`;
-
-const SidebarSubtitle = styled.p`
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    font-family: 'Poppins', sans-serif;
-    margin-top: 0.25rem;
-`;
-
-const MainPanel = styled.div`
+const MainPanel = styled.div<{ showOnMobile?: boolean }>`
     flex: 1;
     display: flex;
     flex-direction: column;
     background: var(--bg-secondary);
+    
+    @media (max-width: 768px) {
+        display: ${props => props.showOnMobile ? 'flex' : 'none'};
+    }
 `;
 
 const EmptyState = styled.div`
