@@ -130,7 +130,7 @@ const LoaderContainer = styled.div<{ $mode: 'light' | 'dark' }>`
     min-height: 100vh;
     background: ${props => 
         props.$mode === 'dark' 
-            ? `url('/login-darkmode-background (1).jpeg')` 
+            ? `url('/login-darkmode-background (3).jpeg')` 
             : `url('/login-lightmode-background (1).jpeg')`
     };
     background-size: cover;
@@ -167,7 +167,7 @@ const LoginContainer = styled.div<{ $mode: 'light' | 'dark' }>`
     min-height: 100vh;
     background: ${props => 
         props.$mode === 'dark' 
-            ? `url('/login-darkmode-background (1).jpeg')` 
+            ? `url('/login-darkmode-background (3).jpeg')` 
             : `url('/login-lightmode-background (1).jpeg')`
     };
     background-size: cover;
