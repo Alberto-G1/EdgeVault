@@ -114,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/admin/profile" onClick={() => setProfileDropdownOpen(false)}>
+                                <Link to="/admin/account-settings" onClick={() => setProfileDropdownOpen(false)}>
                                     <Settings size={18} /> Account Settings
                                 </Link>
                             </li>
@@ -124,14 +124,14 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         
                         <DropdownList>
                             <li>
-                                <a href="#" onClick={(e) => { e.preventDefault(); setProfileDropdownOpen(false); }}>
+                                <Link to="/admin/help-support" onClick={() => setProfileDropdownOpen(false)}>
                                     <HelpCircle size={18} /> Help & Support
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="#" onClick={(e) => { e.preventDefault(); setProfileDropdownOpen(false); }}>
+                                <Link to="/admin/about" onClick={() => setProfileDropdownOpen(false)}>
                                     <Info size={18} /> About EdgeVault
-                                </a>
+                                </Link>
                             </li>
                         </DropdownList>
                         
