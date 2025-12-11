@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History, X } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getTotalUnreadCount } from '../../api/chatService';
 import styled from 'styled-components';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+    isMobileOpen?: boolean;
+    onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onClose }) => {
     const { hasAnyPermission } = usePermissions();
     const [totalUnreadCount, setTotalUnreadCount] = useState<number>(0);
 
@@ -28,10 +33,18 @@ const Sidebar: React.FC = () => {
     }, []);
 
     return (
-        <SidebarContainer>
-            <LogoSection>
-                <img src="/logo.png" alt="EdgeVault Logo" className="logo-image" />
-            </LogoSection>
+        <>
+            {isMobileOpen && <Backdrop onClick={onClose} />}
+            <SidebarContainer $isOpen={isMobileOpen}>
+                <MobileHeader>
+                    <img src="/logo.png" alt="EdgeVault Logo" className="logo-image" />
+                    <CloseButton onClick={onClose}>
+                        <X size={24} />
+                    </CloseButton>
+                </MobileHeader>
+                <LogoSection>
+                    <img src="/logo.png" alt="EdgeVault Logo" className="logo-image" />
+                </LogoSection>
             
             <SidebarNav>
                 <NavItem to="/admin/dashboard">
@@ -127,10 +140,29 @@ const Sidebar: React.FC = () => {
                 <Version>v1.0.0</Version>
             </SidebarFooter>
         </SidebarContainer>
+        </>
     );
 };
 
-const SidebarContainer = styled.aside`
+const Backdrop = styled.div`
+    display: none;
+    
+    @media (max-width: 768px) {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+`;
+
+const SidebarContainer = styled.aside<{ $isOpen?: boolean }>`
     background-color: var(--sidebar-bg);
     width: 280px;
     height: 100vh;
@@ -144,8 +176,50 @@ const SidebarContainer = styled.aside`
         width: 70px;
     }
 
-    @media (max-width: 576px) {
-        display: none;
+    @media (max-width: 768px) {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        z-index: 999;
+        transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-100%)'};
+        transition: transform 0.3s ease;
+        box-shadow: ${props => props.$isOpen ? '2px 0 10px rgba(0,0,0,0.3)' : 'none'};
+    }
+`;
+
+const MobileHeader = styled.div`
+    display: none;
+    
+    @media (max-width: 768px) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        
+        .logo-image {
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+        }
+    }
+`;
+
+const CloseButton = styled.button`
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+    
+    &:hover {
+        background: var(--bg-primary);
     }
 `;
 
@@ -164,6 +238,10 @@ const LogoSection = styled.div`
         @media (max-width: 1100px) {
             width: 40px;
         }
+    }
+    
+    @media (max-width: 768px) {
+        display: none;
     }
 `;
 
