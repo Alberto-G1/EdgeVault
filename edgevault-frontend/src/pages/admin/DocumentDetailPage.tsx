@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDocumentDetails, downloadDocumentVersion, uploadNewVersion } from '../../api/documentService';
+import { getDocumentDetails, downloadDocumentVersion, uploadNewVersion, updateVersionDescription, deleteVersion, requestDocumentDeletion } from '../../api/documentService';
 import type { Document } from '../../types/document';
 import { toast } from 'react-hot-toast';
-import { FileClock, Download, ArrowLeft, Upload, FileText, User, Calendar, GitBranch, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileClock, Download, ArrowLeft, Upload, FileText, User, Calendar, GitBranch, Eye, ChevronDown, ChevronUp, Edit2, Trash2, Trash } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 import Modal from '../../components/common/Modal';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 import DocumentChat from '../../components/document/DocumentChat';
 
 const DocumentDetailPage: React.FC = () => {
@@ -20,8 +21,24 @@ const DocumentDetailPage: React.FC = () => {
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+    const [versionDescription, setVersionDescription] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
+    
+    // Edit version states
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingVersionId, setEditingVersionId] = useState<number | null>(null);
+    const [editDescription, setEditDescription] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
+    
+    // Delete version states
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [deletingVersionId, setDeletingVersionId] = useState<number | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Delete document request states
+    const [isDeleteDocConfirmOpen, setIsDeleteDocConfirmOpen] = useState(false);
+    const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
 
     const fetchDetails = async () => {
         if (!id) return;
@@ -48,13 +65,15 @@ const DocumentDetailPage: React.FC = () => {
         try {
             const { data, filename } = await downloadDocumentVersion(versionId);
             const url = window.URL.createObjectURL(data);
-            const link = document.createElement('a');
+            const link = window.document.createElement('a') as HTMLAnchorElement;
             link.href = url;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
+            link.download = filename;
+            window.document.body.appendChild(link);
             link.click();
             window.URL.revokeObjectURL(url);
-            link.parentNode?.removeChild(link);
+            if (link.parentNode) {
+                link.parentNode.removeChild(link);
+            }
             toast.success('Download started!');
         } catch (error) {
             toast.error('Download failed.');
@@ -75,7 +94,7 @@ const DocumentDetailPage: React.FC = () => {
         }
         setIsUploading(true);
         try {
-            const promise = uploadNewVersion(document.id, fileToUpload);
+            const promise = uploadNewVersion(document.id, fileToUpload, versionDescription);
             const updatedDocument = await toast.promise(promise, {
                 loading: 'Uploading new version...',
                 success: 'New version uploaded successfully!',
@@ -84,6 +103,7 @@ const DocumentDetailPage: React.FC = () => {
             setDocument(updatedDocument);
             setIsUploadModalOpen(false);
             setFileToUpload(null);
+            setVersionDescription('');
             // Expand the new version
             if (updatedDocument.versionHistory.length > 0) {
                 setExpandedVersion(updatedDocument.versionHistory[0].id);
@@ -97,6 +117,63 @@ const DocumentDetailPage: React.FC = () => {
 
     const toggleVersionExpand = (versionId: number) => {
         setExpandedVersion(expandedVersion === versionId ? null : versionId);
+    };
+
+    const handleEditVersion = (version: any) => {
+        setEditingVersionId(version.id);
+        setEditDescription(version.description || '');
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingVersionId) return;
+        setIsUpdating(true);
+        try {
+            await updateVersionDescription(editingVersionId, editDescription);
+            toast.success('Version description updated successfully!');
+            setIsEditModalOpen(false);
+            fetchDetails(); // Refresh document details
+        } catch (error) {
+            toast.error('Failed to update version description.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleDeleteVersion = (versionId: number) => {
+        setDeletingVersionId(versionId);
+        setIsDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingVersionId) return;
+        setIsDeleting(true);
+        try {
+            const updatedDocument = await deleteVersion(deletingVersionId);
+            toast.success('Version deleted successfully!');
+            setDocument(updatedDocument);
+            setIsDeleteConfirmOpen(false);
+            setDeletingVersionId(null);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to delete version.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleRequestDocumentDeletion = async () => {
+        if (!document) return;
+        setIsRequestingDeletion(true);
+        try {
+            await requestDocumentDeletion(document.id);
+            toast.success('Document deletion request submitted successfully! It will be reviewed by an administrator.');
+            setIsDeleteDocConfirmOpen(false);
+            navigate('/admin/documents');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to request document deletion.');
+        } finally {
+            setIsRequestingDeletion(false);
+        }
     };
 
     const formatFileSize = (bytes: number) => {
@@ -147,6 +224,15 @@ const DocumentDetailPage: React.FC = () => {
                         width="180px"
                         height="55px"
                     />
+                    {hasPermission('DOCUMENT_DELETE') && (
+                        <DeleteDocButton 
+                            onClick={() => setIsDeleteDocConfirmOpen(true)}
+                            textOne="Request Deletion"
+                            textTwo="Delete Document"
+                            width="190px"
+                            height="55px"
+                        />
+                    )}
                 </ButtonGroup>
             </PageHeader>
 
@@ -250,6 +336,12 @@ const DocumentDetailPage: React.FC = () => {
                                     
                                     {expandedVersion === version.id && (
                                         <VersionDetails>
+                                            {version.description && (
+                                                <DetailItem>
+                                                    <DetailLabel>Description:</DetailLabel>
+                                                    <DetailValue>{version.description}</DetailValue>
+                                                </DetailItem>
+                                            )}
                                             <DetailItem>
                                                 <DetailLabel>Upload Date:</DetailLabel>
                                                 <DetailValue>{new Date(version.uploadTimestamp).toLocaleString()}</DetailValue>
@@ -263,10 +355,24 @@ const DocumentDetailPage: React.FC = () => {
                                                 <DetailValue>{document.fileName.split('.').pop()?.toUpperCase()}</DetailValue>
                                             </DetailItem>
                                             <DetailAction>
-                                                <DownloadVersionButton onClick={() => handleDownload(version.id)}>
-                                                    <Download size={16} />
-                                                    Download v{version.versionNumber}
-                                                </DownloadVersionButton>
+                                                <ActionButtons>
+                                                    <DownloadVersionButton onClick={() => handleDownload(version.id)}>
+                                                        <Download size={16} />
+                                                        Download v{version.versionNumber}
+                                                    </DownloadVersionButton>
+                                                    {hasPermission('DOCUMENT_UPDATE') && (
+                                                        <EditButton onClick={() => handleEditVersion(version)}>
+                                                            <Edit2 size={16} />
+                                                            Edit
+                                                        </EditButton>
+                                                    )}
+                                                    {hasPermission('DOCUMENT_DELETE') && document.versionHistory.length > 1 && (
+                                                        <DeleteVersionButton onClick={() => handleDeleteVersion(version.id)}>
+                                                            <Trash2 size={16} />
+                                                            Delete
+                                                        </DeleteVersionButton>
+                                                    )}
+                                                </ActionButtons>
                                             </DetailAction>
                                         </VersionDetails>
                                     )}
@@ -286,6 +392,16 @@ const DocumentDetailPage: React.FC = () => {
 
             <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload New Version">
                 <ModalContent>
+                    <DescriptionField>
+                        <DescriptionLabel>Version Description (Optional)</DescriptionLabel>
+                        <DescriptionTextArea
+                            value={versionDescription}
+                            onChange={(e) => setVersionDescription(e.target.value)}
+                            rows={3}
+                            placeholder="Describe changes in this version..."
+                        />
+                    </DescriptionField>
+                    
                     <UploadArea>
                         <UploadLabel htmlFor="version-upload">
                             <Upload size={48} />
@@ -314,12 +430,65 @@ const DocumentDetailPage: React.FC = () => {
                         <CancelButton type="button" onClick={() => setIsUploadModalOpen(false)}>
                             Cancel
                         </CancelButton>
-                        <UploadButton type="button" onClick={handleUploadNewVersion} disabled={isUploading || !fileToUpload}>
-                            {isUploading ? 'Uploading...' : 'Upload New Version'}
-                        </UploadButton>
+                        <HoverButton 
+                            onClick={handleUploadNewVersion} 
+                            disabled={isUploading || !fileToUpload}
+                            textOne={isUploading ? 'Uploading...' : 'Upload New Version'}
+                            textTwo={isUploading ? 'Uploading...' : 'Save'}
+                            width="200px"
+                            height="50px"
+                        />
                     </ModalActions>
                 </ModalContent>
             </Modal>
+
+            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Version Description">
+                <ModalContent>
+                    <DescriptionField>
+                        <DescriptionLabel>Version Description</DescriptionLabel>
+                        <DescriptionTextArea
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            rows={4}
+                            placeholder="Enter version description..."
+                        />
+                    </DescriptionField>
+                    
+                    <ModalActions>
+                        <CancelButton type="button" onClick={() => setIsEditModalOpen(false)}>
+                            Cancel
+                        </CancelButton>
+                        <HoverButton 
+                            onClick={handleSaveEdit} 
+                            disabled={isUpdating}
+                            textOne={isUpdating ? 'Saving...' : 'Save Changes'}
+                            textTwo={isUpdating ? 'Saving...' : 'Save'}
+                            width="180px"
+                            height="50px"
+                        />
+                    </ModalActions>
+                </ModalContent>
+            </Modal>
+
+            <ConfirmationModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Version"
+                message="Are you sure you want to delete this version? This action cannot be undone and the file will be permanently removed."
+                confirmText="Delete Version"
+                isConfirming={isDeleting}
+            />
+            
+            <ConfirmationModal
+                isOpen={isDeleteDocConfirmOpen}
+                onClose={() => setIsDeleteDocConfirmOpen(false)}
+                onConfirm={handleRequestDocumentDeletion}
+                title="Request Document Deletion"
+                message="Are you sure you want to request deletion of this document? The request will be sent to an administrator for approval. All versions will be deleted if approved."
+                confirmText="Request Deletion"
+                isConfirming={isRequestingDeletion}
+            />
         </PageContainer>
     );
 };
@@ -428,6 +597,12 @@ const UploadButton = styled(HoverButton)`
 `;
 
 const DownloadButton = styled(HoverButton)`
+    @media (max-width: 768px) {
+        width: 100% !important;
+    }
+`;
+
+const DeleteDocButton = styled(HoverButton)`
     @media (max-width: 768px) {
         width: 100% !important;
     }
@@ -659,6 +834,12 @@ const DetailAction = styled.div`
     border-top: 1px solid var(--border-color);
 `;
 
+const ActionButtons = styled.div`
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+`;
+
 const DownloadVersionButton = styled.button`
     display: flex;
     align-items: center;
@@ -680,10 +861,87 @@ const DownloadVersionButton = styled.button`
     }
 `;
 
+const EditButton = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgb(59, 130, 246), rgb(99, 102, 241));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+`;
+
+const DeleteVersionButton = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgb(239, 68, 68), rgb(220, 38, 38));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+`;
+
 const ModalContent = styled.div`
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+`;
+
+const DescriptionField = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+`;
+
+const DescriptionLabel = styled.label`
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+`;
+
+const DescriptionTextArea = styled.textarea`
+    padding: 0.875rem;
+    border: 2px solid rgba(46, 151, 197, 0.3);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-family: 'Poppins', sans-serif;
+    resize: vertical;
+    transition: all 0.3s ease;
+
+    &:focus {
+        outline: none;
+        border-color: rgb(46, 151, 197);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+
+    &::placeholder {
+        color: var(--text-tertiary);
+    }
 `;
 
 const UploadArea = styled.div`

@@ -388,9 +388,14 @@ const DocumentManagementPage: React.FC = () => {
                         <CancelButton type="button" onClick={() => { setIsUploadModalOpen(false); resetUploadForm(); }}>
                             Cancel
                         </CancelButton>
-                        <UploadButton type="button" onClick={handleUpload} disabled={isUploading || !fileToUpload || !uploadTitle.trim()}>
-                            {isUploading ? 'Uploading...' : 'Upload Document'}
-                        </UploadButton>
+                        <HoverButton 
+                            onClick={handleUpload} 
+                            disabled={isUploading || !fileToUpload || !uploadTitle.trim()}
+                            textOne={isUploading ? 'Uploading...' : 'Upload Document'}
+                            textTwo={isUploading ? 'Uploading...' : 'Save'}
+                            width="200px"
+                            height="50px"
+                        />
                     </ModalActions>
                 </ModalContent>
             </Modal>

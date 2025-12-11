@@ -114,10 +114,6 @@ const UserManagementPage: React.FC = () => {
         setViewDetailsModalOpen(true);
     };
 
-    const getUserInitials = (username: string) => {
-        return username.substring(0, 2).toUpperCase();
-    };
-
     if (loading) return <FullPageLoader />;
 
     return (
@@ -152,9 +148,10 @@ const UserManagementPage: React.FC = () => {
                         {users.map((user) => (
                             <TableRow key={user.id}>
                                 <TableCell>
-                                    <ProfileAvatar>
-                                        {getUserInitials(user.username)}
-                                    </ProfileAvatar>
+                                    <ProfileAvatar
+                                        src={user.profilePictureUrl || `https://ui-avatars.com/api/?name=${user.username}&background=2E97C5&color=fff`}
+                                        alt={user.username}
+                                    />
                                 </TableCell>
                                 <TableCell className="font-medium">{user.username}</TableCell>
                                 <TableCell>{user.email}</TableCell>
@@ -168,7 +165,7 @@ const UserManagementPage: React.FC = () => {
                                     <RolesCell>
                                         {(user.roles || []).length > 0 ? (
                                             user.roles.slice(0, 2).map((r, idx) => (
-                                                <RolePill key={idx}>{r.name}</RolePill>
+                                                <RolePill key={idx}>{r}</RolePill>
                                             ))
                                         ) : (
                                             <span style={{ color: 'var(--text-secondary)' }}>No roles</span>
@@ -356,23 +353,18 @@ const StatusBadge = styled.span<{ enabled: boolean }>`
     }
 `;
 
-const ProfileAvatar = styled.div`
+const ProfileAvatar = styled.img`
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--light-blue), var(--purple));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 14px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    object-fit: cover;
     box-shadow: 0 2px 8px rgba(46, 151, 197, 0.3);
+    background: linear-gradient(135deg, var(--light-blue), var(--purple));
 
     @media (max-width: 768px) {
         width: 36px;
         height: 36px;
-        font-size: 12px;
     }
 `;
 

@@ -1,6 +1,7 @@
 package com.edgevault.edgevaultbackend.repository.chat;
 
 import com.edgevault.edgevaultbackend.model.chat.Conversation;
+import com.edgevault.edgevaultbackend.model.chat.ConversationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -18,4 +19,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     Optional<Conversation> findDirectConversationBetweenUsers(Long userId1, Long userId2);
 
     List<Conversation> findByParticipants_Id(Long userId);
+
+    Optional<Conversation> findByDocumentIdAndType(Long documentId, ConversationType type);
 }

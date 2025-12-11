@@ -90,7 +90,7 @@ public class DocumentService {
     }
 
     @Transactional
-    public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file) throws IOException {
+    public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file, String description) throws IOException {
         User currentUser = getCurrentUser();
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
@@ -119,6 +119,7 @@ public class DocumentService {
         newVersion.setSizeInBytes(file.getSize());
         newVersion.setUploadTimestamp(LocalDateTime.now());
         newVersion.setUploader(currentUser);
+        newVersion.setDescription(description);
 
         // Add the new version to the document's version list
         document.getVersions().add(newVersion);
@@ -191,6 +192,79 @@ public class DocumentService {
         );
     }
 
+
+    @Transactional
+    public void updateVersionDescription(Long versionId, String description) {
+        User currentUser = getCurrentUser();
+        DocumentVersion version = documentVersionRepository.findById(versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document version not found with id: " + versionId));
+
+        // Security check: Ensure user belongs to document's department
+        if (!version.getDocument().getDepartment().getId().equals(currentUser.getDepartment().getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have permission to update this version.");
+        }
+
+        version.setDescription(description);
+        documentVersionRepository.save(version);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Updated description for version %d of document '%s' (ID: %d).",
+                version.getVersionNumber(), version.getDocument().getTitle(), version.getDocument().getId());
+        auditService.recordEvent(currentUser.getUsername(), "DOCUMENT_VERSION_UPDATE", auditDetails);
+        // ---------------------
+    }
+
+    @Transactional
+    public DocumentResponseDto deleteVersion(Long versionId) {
+        User currentUser = getCurrentUser();
+        DocumentVersion version = documentVersionRepository.findById(versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document version not found with id: " + versionId));
+
+        Document document = version.getDocument();
+
+        // Security check: Ensure user belongs to document's department
+        if (!document.getDepartment().getId().equals(currentUser.getDepartment().getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have permission to delete this version.");
+        }
+
+        // Cannot delete if it's the only version
+        if (document.getVersions().size() <= 1) {
+            throw new IllegalStateException("Cannot delete the only version of a document. Delete the document instead.");
+        }
+
+        // Remove from search index
+        searchService.removeDocumentFromIndex(version);
+
+        // Delete file from S3
+        fileStorageService.deleteFile(version.getS3ObjectKey());
+
+        // If deleting the latest version, update the latest version pointer
+        if (document.getLatestVersion().getId().equals(versionId)) {
+            // Find the next most recent version
+            DocumentVersion newLatestVersion = document.getVersions().stream()
+                    .filter(v -> !v.getId().equals(versionId))
+                    .max((v1, v2) -> v1.getVersionNumber().compareTo(v2.getVersionNumber()))
+                    .orElseThrow(() -> new IllegalStateException("No other versions found"));
+            document.setLatestVersion(newLatestVersion);
+        }
+
+        // Remove from document's version list
+        document.getVersions().remove(version);
+
+        // Delete the version
+        documentVersionRepository.delete(version);
+
+        // Save the document
+        Document updatedDocument = documentRepository.save(document);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Deleted version %d of document '%s' (ID: %d).",
+                version.getVersionNumber(), document.getTitle(), document.getId());
+        auditService.recordEvent(currentUser.getUsername(), "DOCUMENT_VERSION_DELETE", auditDetails);
+        // ---------------------
+
+        return mapToDocumentResponseDto(updatedDocument);
+    }
 
     @Transactional
     public void requestDocumentDeletion(Long documentId) {
@@ -311,7 +385,6 @@ public class DocumentService {
                         .collect(Collectors.toList()))
                 .build();
     }
-
     private DocumentVersionDto mapToDocumentVersionDto(DocumentVersion ver) {
         return DocumentVersionDto.builder()
                 .id(ver.getId())
@@ -319,6 +392,7 @@ public class DocumentService {
                 .uploadTimestamp(ver.getUploadTimestamp())
                 .sizeInBytes(ver.getSizeInBytes())
                 .uploaderUsername(ver.getUploader().getUsername())
+                .description(ver.getDescription())
                 .build();
     }
 

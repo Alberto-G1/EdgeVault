@@ -25,8 +25,11 @@ public class Conversation {
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private ConversationType type;
+
+    // For DOCUMENT type conversations, this links to the document
+    private Long documentId;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

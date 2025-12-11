@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getAllDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departmentService';
 import type { Department } from '../../types/user';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit, Trash2, Building, Users, Briefcase, Search, Filter, Hash, Calendar } from 'lucide-react';
+import { Edit, Trash2, Building, Users, Search, Filter, Briefcase } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
@@ -21,7 +21,6 @@ const DepartmentManagementPage: React.FC = () => {
     
     const [deptName, setDeptName] = useState('');
     const [deptDescription, setDeptDescription] = useState('');
-    const [deptCode, setDeptCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchDepartments = async () => {
@@ -43,8 +42,7 @@ const DepartmentManagementPage: React.FC = () => {
     const handleOpenModal = (dept: Department | null = null) => {
         setCurrentDept(dept);
         setDeptName(dept ? dept.name : '');
-        setDeptDescription(dept ? dept.description : '');
-        setDeptCode(dept ? dept.code || '' : '');
+        setDeptDescription(dept ? dept.description || '' : '');
         setIsModalOpen(true);
     };
 
@@ -53,21 +51,15 @@ const DepartmentManagementPage: React.FC = () => {
         setCurrentDept(null);
         setDeptName('');
         setDeptDescription('');
-        setDeptCode('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        const deptData = {
-            name: deptName,
-            description: deptDescription,
-            code: deptCode || undefined
-        };
         
         const promise = currentDept
-            ? updateDepartment(currentDept.id, deptData)
-            : createDepartment(deptData);
+            ? updateDepartment(currentDept.id, deptName, deptDescription)
+            : createDepartment(deptName, deptDescription);
             
         try {
             await toast.promise(promise, {
@@ -118,8 +110,7 @@ const DepartmentManagementPage: React.FC = () => {
     const filteredDepartments = departments
         .filter(dept => 
             dept.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            dept.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            dept.code?.toLowerCase().includes(searchQuery.toLowerCase())
+            dept.description?.toLowerCase().includes(searchQuery.toLowerCase())
         )
         .sort((a, b) => {
             if (sortBy === 'name') {
@@ -208,8 +199,8 @@ const DepartmentManagementPage: React.FC = () => {
                         <Users size={24} />
                     </StatIcon>
                     <StatContent>
-                        <StatLabel>Active Departments</StatLabel>
-                        <StatValue>{departments.filter(d => d.isActive !== false).length}</StatValue>
+                        <StatLabel>Total Departments</StatLabel>
+                        <StatValue>{departments.length}</StatValue>
                     </StatContent>
                 </StatCard>
             </StatsContainer>
@@ -228,12 +219,6 @@ const DepartmentManagementPage: React.FC = () => {
                                     <DeptName style={{ color: colors.text }}>
                                         {dept.name}
                                     </DeptName>
-                                    {dept.code && (
-                                        <DeptCode>
-                                            <Hash size={12} />
-                                            {dept.code}
-                                        </DeptCode>
-                                    )}
                                 </DeptInfo>
                             </DeptHeader>
                             
@@ -243,12 +228,8 @@ const DepartmentManagementPage: React.FC = () => {
                             
                             <DeptMeta>
                                 <MetaItem>
-                                    <Briefcase size={14} />
-                                    <span>Users: {dept.userCount || 0}</span>
-                                </MetaItem>
-                                <MetaItem>
-                                    <Calendar size={14} />
-                                    <span>Created: {new Date(dept.createdAt || '').toLocaleDateString()}</span>
+                                    <Building size={14} />
+                                    <span>{dept.name}</span>
                                 </MetaItem>
                             </DeptMeta>
                             
@@ -633,15 +614,6 @@ const DeptName = styled.h3`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-`;
-
-const DeptCode = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    font-family: 'Poppins', sans-serif;
 `;
 
 const DeptDescription = styled.p`

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import type { ChatMessage } from '../../types/chat';
-import { getChatHistory } from '../../api/chatService';
+import type { ChatMessage, Conversation } from '../../types/chat';
+import { getChatHistory, getDocumentConversation } from '../../api/chatService';
 import { useAuth } from '../../hooks/useAuth';
 import { Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -14,32 +14,39 @@ interface DocumentChatProps {
 const DocumentChat: React.FC<DocumentChatProps> = ({ documentId }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [conversationId, setConversationId] = useState<number | null>(null);
     const { user, token } = useAuth();
     const stompClientRef = useRef<Client | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        // Fetch initial chat history
-        const fetchHistory = async () => {
+        // First, get or create the document conversation
+        const initializeChat = async () => {
             try {
-                const history = await getChatHistory(documentId);
+                const conversation = await getDocumentConversation(documentId);
+                setConversationId(conversation.id);
+                
+                // Then fetch chat history
+                const history = await getChatHistory(conversation.id);
                 setMessages(history);
             } catch (error) {
                 toast.error("Could not load chat history.");
             }
         };
-        fetchHistory();
+        initializeChat();
 
-        // Setup WebSocket client
+        // Setup WebSocket client only after we have the conversation ID
+        if (!conversationId) return;
+
         const client = new Client({
             webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
             connectHeaders: {
-                Authorization: `Bearer ${token}`, // Pass token for potential future security checks
+                Authorization: `Bearer ${token}`,
             },
             onConnect: () => {
-                console.log('Connected to WebSocket');
-                // Subscribe to the topic for this document
-                client.subscribe(`/topic/chat/${documentId}`, (message) => {
+                console.log(`Connected to WebSocket for document ${documentId} (conversation ${conversationId})`);
+                // Subscribe to the conversation topic
+                client.subscribe(`/topic/chat/${conversationId}`, (message) => {
                     const receivedMessage = JSON.parse(message.body) as ChatMessage;
                     setMessages((prevMessages) => [...prevMessages, receivedMessage]);
                 });
@@ -57,7 +64,7 @@ const DocumentChat: React.FC<DocumentChatProps> = ({ documentId }) => {
         return () => {
             client.deactivate();
         };
-    }, [documentId, token]);
+    }, [documentId, conversationId, token]);
     
     // Auto-scroll to the latest message
     useEffect(() => {
@@ -66,9 +73,9 @@ const DocumentChat: React.FC<DocumentChatProps> = ({ documentId }) => {
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() && stompClientRef.current?.connected) {
+        if (newMessage.trim() && stompClientRef.current?.connected && conversationId) {
             stompClientRef.current.publish({
-                destination: `/app/chat/${documentId}`,
+                destination: `/app/chat/${conversationId}`,
                 body: JSON.stringify({ content: newMessage }),
             });
             setNewMessage('');

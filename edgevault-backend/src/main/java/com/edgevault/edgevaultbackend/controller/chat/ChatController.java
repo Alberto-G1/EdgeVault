@@ -57,4 +57,13 @@ public class ChatController {
         Conversation conversation = chatService.getOrCreateDirectConversation(authentication.getName(), withUser);
         return ResponseEntity.ok(conversation);
     }
+
+    @GetMapping("/api/v1/documents/{documentId}/conversation")
+    public ResponseEntity<Conversation> getDocumentConversation(
+            @PathVariable Long documentId,
+            Authentication authentication) {
+
+        Conversation conversation = chatService.getOrCreateDocumentConversation(documentId, authentication.getName());
+        return ResponseEntity.ok(conversation);
+    }
 }

@@ -14,7 +14,6 @@ import {
   X,
   Key,
   Lock,
-  Unlock,
   Sparkles
 } from 'lucide-react';
 
@@ -29,13 +28,11 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
     const isEditMode = !!userToEdit;
     const [departments, setDepartments] = useState<Department[]>([]);
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
-    const [showPassword, setShowPassword] = useState(false);
 
     const [formData, setFormData] = useState({
         username: '',
         email: '',
-        password: '',
-        roles: ['Department User'],
+        role: 'Department User', // Single role selection
         enabled: true,
         departmentId: '', 
     });
@@ -63,11 +60,11 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
     useEffect(() => {
         if (isEditMode && userToEdit && departments.length > 0) {
             const userDept = departments.find(d => d.name === userToEdit.departmentName);
+            const userRole = userToEdit.roles && userToEdit.roles.length > 0 ? userToEdit.roles[0] : 'Department User';
             setFormData({
                 username: userToEdit.username,
                 email: userToEdit.email,
-                password: '',
-                roles: userToEdit.roles.map(r => r.name),
+                role: userRole,
                 enabled: userToEdit.enabled,
                 departmentId: userDept ? String(userDept.id) : '',
             });
@@ -82,34 +79,21 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
             [name]: isCheckbox ? (e.target as HTMLInputElement).checked : value,
         }));
     };
-    
-    const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedRoles = Array.from(e.target.selectedOptions, option => option.value);
-        setFormData(prev => ({ ...prev, roles: selectedRoles }));
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, departmentId: Number(formData.departmentId) });
-    };
-
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
-
-    const handleRoleToggle = (roleName: string) => {
-        setFormData(prev => {
-            const currentRoles = [...prev.roles];
-            const roleIndex = currentRoles.indexOf(roleName);
-            
-            if (roleIndex > -1) {
-                currentRoles.splice(roleIndex, 1);
-            } else {
-                currentRoles.push(roleName);
-            }
-            
-            return { ...prev, roles: currentRoles };
+        onSave({ 
+            ...formData, 
+            roles: [formData.role], // Convert single role to array
+            departmentId: Number(formData.departmentId) 
         });
+    };
+
+    const handleRoleSelect = (roleName: string) => {
+        setFormData(prev => ({
+            ...prev,
+            role: roleName
+        }));
     };
 
     const handleDepartmentSelect = (deptId: string) => {
@@ -178,23 +162,15 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                                 <IconWrapper style={{ background: 'rgba(255, 140, 0, 0.1)', color: '#FF8C00' }}>
                                     <Key size={18} />
                                 </IconWrapper>
-                                Password
+                                Default Password
                             </Label>
-                            <PasswordInputContainer>
-                                <Input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Enter password"
-                                    required={!isEditMode}
-                                    style={{ borderLeft: '4px solid #FF8C00', flex: 1 }}
-                                />
-                                <TogglePasswordButton type="button" onClick={togglePasswordVisibility}>
-                                    {showPassword ? <Unlock size={18} /> : <Lock size={18} />}
-                                </TogglePasswordButton>
-                            </PasswordInputContainer>
-                            <HelpText>Minimum 8 characters with letters and numbers</HelpText>
+                            <PasswordInfoBox>
+                                <Lock size={18} />
+                                <div>
+                                    <PasswordValue>Default@123U</PasswordValue>
+                                    <HelpText>User will be required to change password on first login</HelpText>
+                                </div>
+                            </PasswordInfoBox>
                         </FormGroup>
                     )}
 
@@ -224,23 +200,22 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                             <IconWrapper style={{ background: 'rgba(255, 140, 0, 0.1)', color: '#FF8C00' }}>
                                 <Shield size={18} />
                             </IconWrapper>
-                            Roles
-                            <RoleCount>({formData.roles.length} selected)</RoleCount>
+                            Role
                         </Label>
                         <RoleGrid>
                             {availableRoles.map(role => (
                                 <RoleChip 
                                     key={role.id}
-                                    selected={formData.roles.includes(role.name)}
-                                    onClick={() => handleRoleToggle(role.name)}
+                                    selected={formData.role === role.name}
+                                    onClick={() => handleRoleSelect(role.name)}
                                 >
                                     <Shield size={14} />
                                     {role.name}
-                                    {formData.roles.includes(role.name) && <CheckCircle size={14} />}
+                                    {formData.role === role.name && <CheckCircle size={14} />}
                                 </RoleChip>
                             ))}
                         </RoleGrid>
-                        <HelpText>Click to select multiple roles</HelpText>
+                        <HelpText>Select one role for this user</HelpText>
                     </FormGroup>
                 </FormGrid>
 
@@ -519,6 +494,30 @@ const TogglePasswordButton = styled.button`
         background: rgba(229, 151, 54, 0.2);
         transform: translateY(-2px);
     }
+`;
+
+const PasswordInfoBox = styled.div`
+    padding: 1rem 1.25rem;
+    background: rgba(255, 140, 0, 0.05);
+    border: 2px solid rgba(255, 140, 0, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: #FF8C00;
+
+    > div {
+        flex: 1;
+    }
+`;
+
+const PasswordValue = styled.div`
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    letter-spacing: 1px;
 `;
 
 const DepartmentGrid = styled.div`

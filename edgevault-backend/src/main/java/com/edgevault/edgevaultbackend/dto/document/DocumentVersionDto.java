@@ -12,4 +12,5 @@ public class DocumentVersionDto {
     private String uploaderUsername;
     private LocalDateTime uploadTimestamp;
     private Long sizeInBytes;
+    private String description;
 }

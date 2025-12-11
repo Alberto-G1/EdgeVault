@@ -1,6 +1,7 @@
 package com.edgevault.edgevaultbackend.model.notification;
 
 import com.edgevault.edgevaultbackend.model.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "recipient_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "department", "roles", "password"})
     private User recipient; // The user who receives the notification
 
     @Column(nullable = false)
