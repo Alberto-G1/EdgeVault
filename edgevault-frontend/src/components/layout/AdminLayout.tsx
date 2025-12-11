@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import styled, { keyframes } from 'styled-components';
@@ -8,11 +8,16 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    
     return (
         <LayoutContainer>
-            <Sidebar />
+            <Sidebar 
+                isMobileOpen={isMobileSidebarOpen} 
+                onClose={() => setIsMobileSidebarOpen(false)} 
+            />
             <MainWrapper>
-                <Header />
+                <Header onMenuClick={() => setIsMobileSidebarOpen(true)} />
                 <MainContent>
                     <PageTransition>
                         {children}

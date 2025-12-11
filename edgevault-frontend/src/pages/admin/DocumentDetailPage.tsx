@@ -4,6 +4,7 @@ import { getDocumentDetails, downloadDocumentVersion, uploadNewVersion, updateVe
 import type { Document } from '../../types/document';
 import { FileClock, Download, ArrowLeft, Upload, FileText, User, Calendar, GitBranch, Eye, ChevronDown, ChevronUp, Edit2, Trash2, Trash } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useToast } from '../../context/ToastContext';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';

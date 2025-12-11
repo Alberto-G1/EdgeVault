@@ -744,7 +744,7 @@ const CustomModal = styled.div<{ $isOpen: boolean }>`
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(8px);
-    display: ${props => props.isOpen ? 'flex' : 'none'};
+    display: ${props => props.$isOpen ? 'flex' : 'none'};
     align-items: center;
     justify-content: center;
     z-index: 10000;

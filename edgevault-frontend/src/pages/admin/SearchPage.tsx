@@ -27,9 +27,14 @@ const SearchPage: React.FC = () => {
             try {
                 setLoading(true);
                 const data = await performSearch(query);
-                setResults(data);
-            } catch (error) {
-                showError('Error', 'An error occurred while searching.');
+                setResults(data || []);
+            } catch (error: any) {
+                console.error('Search error:', error);
+                const errorMessage = error.response?.data?.message 
+                    || error.message 
+                    || 'An error occurred while searching.';
+                showError('Search Error', errorMessage);
+                setResults([]);
             } finally {
                 setLoading(false);
             }

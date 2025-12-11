@@ -94,6 +94,15 @@ const PageContainer = styled.div`
             transform: translateY(0);
         }
     }
+    
+    @media (max-width: 768px) {
+        padding: 1rem;
+        height: calc(100vh - 70px);
+    }
+    
+    @media (max-width: 576px) {
+        padding: 0.5rem;
+    }
 `;
 
 const ChatContainer = styled.div`

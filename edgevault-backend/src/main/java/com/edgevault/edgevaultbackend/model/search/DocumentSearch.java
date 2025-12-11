@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.model.search;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -38,7 +39,7 @@ public class DocumentSearch {
     @Field(type = FieldType.Keyword, name = "uploader")
     private String uploaderUsername;
 
-    @Field(type = FieldType.Date, name = "uploadTimestamp")
+    @Field(type = FieldType.Date, name = "uploadTimestamp", format = DateFormat.date_optional_time)
     private LocalDateTime uploadTimestamp;
 
     @Field(type = FieldType.Integer, name = "versionNumber")

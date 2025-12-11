@@ -24,6 +24,8 @@ const UserManagementPage: React.FC = () => {
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [viewDetailsModalOpen, setViewDetailsModalOpen] = useState(false);
     const [userToView, setUserToView] = useState<User | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     
 
     // Wrap fetchUsers in useCallback to make it a stable function
@@ -112,6 +114,22 @@ const UserManagementPage: React.FC = () => {
 
     if (loading) return <FullPageLoader />;
 
+    // Pagination calculations
+    const totalItems = users.length;
+    const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
+    const startIndex = itemsPerPage === -1 ? 0 : (currentPage - 1) * itemsPerPage;
+    const endIndex = itemsPerPage === -1 ? totalItems : startIndex + itemsPerPage;
+    const currentUsers = users.slice(startIndex, endIndex);
+    
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+    
+    const handleItemsPerPageChange = (value: number) => {
+        setItemsPerPage(value);
+        setCurrentPage(1); // Reset to first page
+    };
+
     return (
         <PageContainer>
             <PageHeader>
@@ -141,7 +159,7 @@ const UserManagementPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map((user, index) => (
+                        {currentUsers.map((user, index) => (
                             <TableRow key={user.id} style={{ animationDelay: `${0.2 + index * 0.05}s` }}>
                                 <TableCell>
                                     <ProfileAvatar
@@ -195,6 +213,68 @@ const UserManagementPage: React.FC = () => {
                     </tbody>
                 </StyledTable>
             </TableContainer>
+            
+            <PaginationContainer>
+                <PaginationInfo>
+                    Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} users
+                </PaginationInfo>
+                
+                <PaginationControls>
+                    <ItemsPerPageSelect 
+                        value={itemsPerPage} 
+                        onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    >
+                        <option value={5}>5 per page</option>
+                        <option value={10}>10 per page</option>
+                        <option value={15}>15 per page</option>
+                        <option value={20}>20 per page</option>
+                        <option value={25}>25 per page</option>
+                        <option value={35}>35 per page</option>
+                        <option value={45}>45 per page</option>
+                        <option value={50}>50 per page</option>
+                        <option value={70}>70 per page</option>
+                        <option value={80}>80 per page</option>
+                        <option value={90}>90 per page</option>
+                        <option value={100}>100 per page</option>
+                        <option value={-1}>All</option>
+                    </ItemsPerPageSelect>
+                    
+                    <PageButtons>
+                        <PageButton 
+                            onClick={() => handlePageChange(currentPage - 1)} 
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </PageButton>
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(page => {
+                                // Show first, last, current, and adjacent pages
+                                return page === 1 || 
+                                       page === totalPages || 
+                                       (page >= currentPage - 1 && page <= currentPage + 1);
+                            })
+                            .map((page, index, array) => (
+                                <React.Fragment key={page}>
+                                    {index > 0 && array[index - 1] !== page - 1 && <PageEllipsis>...</PageEllipsis>}
+                                    <PageButton
+                                        onClick={() => handlePageChange(page)}
+                                        $active={currentPage === page}
+                                    >
+                                        {page}
+                                    </PageButton>
+                                </React.Fragment>
+                            ))}
+                        
+                        <PageButton 
+                            onClick={() => handlePageChange(currentPage + 1)} 
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </PageButton>
+                    </PageButtons>
+                </PaginationControls>
+            </PaginationContainer>
 
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={userToEdit ? 'Edit User' : 'Create New User'}>
                 <UserForm 
@@ -301,6 +381,25 @@ const TableContainer = styled.div`
 
     @media (max-width: 768px) {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        
+        &::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        &::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 4px;
+        }
+        
+        &::-webkit-scrollbar-thumb {
+            background: rgba(46, 151, 197, 0.5);
+            border-radius: 4px;
+            
+            &:hover {
+                background: rgba(46, 151, 197, 0.7);
+            }
+        }
     }
 `;
 
@@ -309,7 +408,7 @@ const StyledTable = styled.table`
     border-collapse: collapse;
 
     @media (max-width: 768px) {
-        min-width: 800px;
+        min-width: 900px;
     }
 `;
 
@@ -425,6 +524,121 @@ const ActionButtons = styled.div`
     @media (max-width: 768px) {
         gap: 6px;
     }
+`;
+
+const PaginationContainer = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 2px solid rgba(46, 151, 197, 0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: stretch;
+    }
+`;
+
+const PaginationInfo = styled.div`
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+
+    @media (max-width: 768px) {
+        text-align: center;
+    }
+`;
+
+const PaginationControls = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        width: 100%;
+    }
+`;
+
+const ItemsPerPageSelect = styled.select`
+    padding: 8px 12px;
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+
+    &:hover {
+        border-color: rgba(46, 151, 197, 0.5);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: var(--light-blue);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+    }
+`;
+
+const PageButtons = styled.div`
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+        justify-content: center;
+        width: 100%;
+    }
+`;
+
+const PageButton = styled.button<{ $active?: boolean }>`
+    padding: 8px 14px;
+    border: 2px solid ${props => props.$active ? 'var(--light-blue)' : 'rgba(46, 151, 197, 0.2)'};
+    border-radius: 8px;
+    background: ${props => props.$active ? 'var(--light-blue)' : 'var(--bg-primary)'};
+    color: ${props => props.$active ? 'white' : 'var(--text-primary)'};
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+    min-width: 40px;
+
+    &:hover:not(:disabled) {
+        background: ${props => props.$active ? 'var(--light-blue)' : 'var(--hover-color)'};
+        border-color: var(--light-blue);
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 576px) {
+        padding: 6px 10px;
+        font-size: 13px;
+        min-width: 36px;
+    }
+`;
+
+const PageEllipsis = styled.span`
+    padding: 8px 4px;
+    color: var(--text-secondary);
+    font-weight: 600;
 `;
 
 const ActionButton = styled.button`

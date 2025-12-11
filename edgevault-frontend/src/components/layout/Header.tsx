@@ -7,11 +7,15 @@ import SearchBar from '../common/SearchBar';
 import NotificationDropdown from '../common/NotificationDropdown';
 import ExpandableButton from '../common/ExpandableButton';
 import { Link } from 'react-router-dom';
-import { User, ChevronDown, Settings, HelpCircle, Info } from 'lucide-react';
+import { User, ChevronDown, Settings, HelpCircle, Info, Menu } from 'lucide-react';
 import styled from 'styled-components';
 import { useToast } from '../../context/ToastContext';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+    onMenuClick?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const { user, logout } = useAuth();
     const { showSuccess } = useToast();
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -66,6 +70,10 @@ const Header: React.FC = () => {
 
     return (
         <HeaderContainer>
+            <MobileMenuButton onClick={onMenuClick}>
+                <Menu size={24} />
+            </MobileMenuButton>
+            
             <SearchSection>
                 <SearchBar />
             </SearchSection>
@@ -161,8 +169,30 @@ const HeaderContainer = styled.header`
     z-index: 100;
 
     @media (max-width: 768px) {
-        padding: 0 20px;
+        padding: 0 15px;
         height: 70px;
+        gap: 10px;
+    }
+`;
+
+const MobileMenuButton = styled.button`
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    
+    &:hover {
+        background: var(--bg-primary);
+    }
+    
+    @media (max-width: 768px) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 `;
 
@@ -170,8 +200,12 @@ const SearchSection = styled.div`
     flex: 1;
     max-width: 500px;
 
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
         max-width: 300px;
+    }
+
+    @media (max-width: 768px) {
+        max-width: 200px;
     }
 
     @media (max-width: 576px) {
@@ -185,7 +219,11 @@ const HeaderControls = styled.div`
     gap: 25px;
 
     @media (max-width: 768px) {
-        gap: 15px;
+        gap: 10px;
+    }
+    
+    @media (max-width: 576px) {
+        gap: 8px;
     }
 `;
 

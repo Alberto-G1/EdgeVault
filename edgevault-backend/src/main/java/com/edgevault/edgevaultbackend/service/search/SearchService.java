@@ -82,29 +82,45 @@ public class SearchService {
     }
 
     public List<DocumentSearch> searchDocuments(String query) {
-        User currentUser = getCurrentUser();
-        Long departmentId = currentUser.getDepartment().getId();
+        try {
+            User currentUser = getCurrentUser();
+            
+            if (currentUser.getDepartment() == null) {
+                log.warn("User {} has no department assigned, returning empty search results", currentUser.getUsername());
+                return List.of();
+            }
+            
+            Long departmentId = currentUser.getDepartment().getId();
+            log.info("Searching documents for query: '{}' in department: {}", query, departmentId);
 
-        // Create a criteria for the search query.
-        // This will search in title, description, fileName, and the extracted content.
-        Criteria searchCriteria = new Criteria("title").contains(query)
-                .or("description").contains(query)
-                .or("fileName").contains(query)
-                .or("content").contains(query);
+            // Create a criteria for the search query.
+            // This will search in title, description, fileName, and the extracted content.
+            Criteria searchCriteria = new Criteria("title").contains(query)
+                    .or(new Criteria("description").contains(query))
+                    .or(new Criteria("fileName").contains(query))
+                    .or(new Criteria("content").contains(query));
 
-        // Create a filter criteria to only allow results from the user's department.
-        Criteria departmentFilter = new Criteria("departmentId").is(departmentId);
+            // Create a filter criteria to only allow results from the user's department.
+            Criteria departmentFilter = new Criteria("departmentId").is(departmentId);
 
-        // Combine the criteria: must match the department AND the search query.
-        Criteria finalCriteria = departmentFilter.and(searchCriteria);
+            // Combine the criteria: must match the department AND the search query.
+            Criteria finalCriteria = departmentFilter.and(searchCriteria);
 
-        // Build and execute the query
-        CriteriaQuery criteriaQuery = new CriteriaQuery(finalCriteria);
-        SearchHits<DocumentSearch> searchHits = elasticsearchOperations.search(criteriaQuery, DocumentSearch.class);
+            // Build and execute the query
+            CriteriaQuery criteriaQuery = new CriteriaQuery(finalCriteria);
+            SearchHits<DocumentSearch> searchHits = elasticsearchOperations.search(criteriaQuery, DocumentSearch.class);
 
-        return searchHits.stream()
-                .map(hit -> hit.getContent())
-                .collect(Collectors.toList());
+            List<DocumentSearch> results = searchHits.stream()
+                    .map(hit -> hit.getContent())
+                    .collect(Collectors.toList());
+            
+            log.info("Found {} results for query: '{}'", results.size(), query);
+            return results;
+            
+        } catch (Exception e) {
+            log.error("Error searching documents with query: '{}'", query, e);
+            throw new RuntimeException("Failed to search documents: " + e.getMessage(), e);
+        }
     }
 
     private User getCurrentUser() {
