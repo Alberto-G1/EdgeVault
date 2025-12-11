@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllRoles, deleteRole } from '../../api/roleService';
 import type { Role } from '../../types/user';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Edit, Trash2, ShieldCheck, Users, Key, Crown } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
@@ -10,6 +10,7 @@ import HoverButton from '../../components/common/HoverButton';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const RoleManagementPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'system' | 'custom'>('all');
@@ -24,7 +25,7 @@ const RoleManagementPage: React.FC = () => {
             const data = await getAllRoles();
             setRoles(data);
         } catch (error) {
-            toast.error('Failed to fetch roles.');
+            showError('Error', 'Failed to fetch roles.');
         } finally {
             setLoading(false);
         }
@@ -44,16 +45,13 @@ const RoleManagementPage: React.FC = () => {
         
         setIsDeleting(true);
         try {
-            await toast.promise(deleteRole(roleToDelete), {
-                loading: 'Deleting role...',
-                success: 'Role deleted successfully!',
-                error: (err) => err.response?.data?.message || 'Failed to delete role.',
-            });
+            await deleteRole(roleToDelete);
+            showSuccess('Success', 'Role deleted successfully!');
             fetchRoles();
             setIsDeleteModalOpen(false);
             setRoleToDelete(null);
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to delete role.');
         } finally {
             setIsDeleting(false);
         }
@@ -133,19 +131,19 @@ const RoleManagementPage: React.FC = () => {
 
             <FilterTabs>
                 <FilterTab 
-                    active={filter === 'all'} 
+                    $active={filter === 'all'} 
                     onClick={() => setFilter('all')}
                 >
                     All Roles ({roles.length})
                 </FilterTab>
                 <FilterTab 
-                    active={filter === 'system'} 
+                    $active={filter === 'system'} 
                     onClick={() => setFilter('system')}
                 >
                     System Roles
                 </FilterTab>
                 <FilterTab 
-                    active={filter === 'custom'} 
+                    $active={filter === 'custom'} 
                     onClick={() => setFilter('custom')}
                 >
                     Custom Roles
@@ -153,12 +151,12 @@ const RoleManagementPage: React.FC = () => {
             </FilterTabs>
 
             <RoleGrid>
-                {filteredRoles.map((role) => {
+                {filteredRoles.map((role, index) => {
                     const colors = getRoleColor(role.name);
                     const isSystemRole = ['Admin', 'Administrator', 'Super Admin'].includes(role.name);
                     
                     return (
-                        <RoleCard key={role.id} style={{ borderColor: colors.border, background: colors.bg }}>
+                        <RoleCard key={role.id} style={{ borderColor: colors.border, background: colors.bg, animationDelay: `${index * 0.05}s` }}>
                             <RoleHeader>
                                 <RoleIcon style={{ background: colors.icon }}>
                                     {getRoleIcon(role.name)}
@@ -321,7 +319,7 @@ const FilterTabs = styled.div`
     box-shadow: 0 4px 12px var(--shadow);
 `;
 
-const FilterTab = styled.button<{ active: boolean }>`
+const FilterTab = styled.button<{ $active: boolean }>`
     padding: 0.75rem 1.5rem;
     background: ${props => props.active ? 'linear-gradient(135deg, rgb(46, 151, 197), rgb(150, 129, 158))' : 'transparent'};
     color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
@@ -359,10 +357,41 @@ const RoleCard = styled.div`
     box-shadow: 0 8px 24px var(--shadow);
     transition: all 0.3s ease;
     border: 2px solid;
+    animation: slideUp 0.5s ease-out backwards;
+    position: relative;
+    overflow: hidden;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(to right, var(--light-blue), var(--purple));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+    }
 
     &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px var(--shadow);
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px var(--shadow);
+        
+        &::before {
+            transform: scaleX(1);
+        }
     }
 `;
 

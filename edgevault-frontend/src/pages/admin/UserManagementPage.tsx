@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback} from 'react';
 import { getAllUserDetails, createUser, updateUser, deleteUser } from '../../api/userService'; // <-- CRITICAL: Use getAllUserDetails
 import type { User } from '../../types/user';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import UserForm from '../../components/admin/UserForm';
@@ -13,6 +13,7 @@ import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import UserDetailsModal from '../../components/common/UserDetailsModal';
 
 const UserManagementPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const { hasPermission, hasAnyPermission } = usePermissions();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ const UserManagementPage: React.FC = () => {
             const data = await getAllUserDetails();
             setUsers(data);
         } catch (error) {
-            toast.error('Failed to fetch detailed user list.');
+            showError('Error', 'Failed to fetch detailed user list.');
         } finally {
             setLoading(false);
         }
@@ -68,20 +69,18 @@ const UserManagementPage: React.FC = () => {
             departmentId: formData.departmentId 
         };
 
-        const promise = userToEdit
-            ? updateUser(userToEdit.id, payload)
-            : createUser({ ...payload, username: formData.username }); // Password is not sent
-
         try {
-            await toast.promise(promise, {
-                loading: 'Saving user...',
-                success: `User ${userToEdit ? 'updated' : 'created'} successfully!`,
-                error: (err) => err.response?.data?.message || 'Failed to save user.',
-            });
+            if (userToEdit) {
+                await updateUser(userToEdit.id, payload);
+                showSuccess('Success', 'User updated successfully!');
+            } else {
+                await createUser({ ...payload, username: formData.username });
+                showSuccess('Success', 'User created successfully!');
+            }
             handleCloseModal();
             fetchUsers();
         } catch (error: any) {
-            console.error(error.response?.data?.message || error.message);
+            showError('Error', error.response?.data?.message || 'Failed to save user.');
         } finally {
             setIsSubmitting(false);
         }
@@ -96,14 +95,11 @@ const UserManagementPage: React.FC = () => {
         if (userToDelete === null) return;
         
         try {
-            await toast.promise(deleteUser(userToDelete), {
-                loading: 'Deleting user...',
-                success: 'User deleted successfully!',
-                error: (err) => err.response?.data?.message || 'Failed to delete user.',
-            });
+            await deleteUser(userToDelete);
+            showSuccess('Success', 'User deleted successfully!');
             fetchUsers();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to delete user.');
         } finally {
             setUserToDelete(null);
         }
@@ -145,8 +141,8 @@ const UserManagementPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map((user) => (
-                            <TableRow key={user.id}>
+                        {users.map((user, index) => (
+                            <TableRow key={user.id} style={{ animationDelay: `${0.2 + index * 0.05}s` }}>
                                 <TableCell>
                                     <ProfileAvatar
                                         src={user.profilePictureUrl || `https://ui-avatars.com/api/?name=${user.username}&background=2E97C5&color=fff`}
@@ -157,7 +153,7 @@ const UserManagementPage: React.FC = () => {
                                 <TableCell>{user.email}</TableCell>
                                 <TableCell>{user.departmentName || 'Not assigned'}</TableCell>
                                 <TableCell>
-                                    <StatusBadge enabled={user.enabled}>
+                                    <StatusBadge $enabled={user.enabled}>
                                         {user.enabled ? 'Active' : 'Inactive'}
                                     </StatusBadge>
                                 </TableCell>
@@ -232,6 +228,18 @@ const PageContainer = styled.div`
     width: 100%;
     padding: 30px;
     font-family: 'Poppins', sans-serif;
+    animation: fadeIn 0.4s ease-in;
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     @media (max-width: 768px) {
         padding: 25px 20px;
@@ -247,6 +255,18 @@ const PageHeader = styled.div`
     justify-content: space-between;
     align-items: center;
     margin-bottom: 32px;
+    animation: slideUp 0.5s ease-out backwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     .title {
         font-size: 36px;
@@ -277,6 +297,7 @@ const TableContainer = styled.div`
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 4px 16px var(--shadow);
+    animation: slideUp 0.5s ease-out 0.1s backwards;
 
     @media (max-width: 768px) {
         overflow-x: auto;
@@ -310,10 +331,12 @@ const TableHeader = styled.th`
 `;
 
 const TableRow = styled.tr`
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
+    animation: slideUp 0.4s ease-out backwards;
 
     &:hover {
         background: var(--bg-primary);
+        transform: translateX(4px);
     }
 
     &:not(:last-child) {
@@ -337,7 +360,7 @@ const TableCell = styled.td`
     }
 `;
 
-const StatusBadge = styled.span<{ enabled: boolean }>`
+const StatusBadge = styled.span<{ $enabled: boolean }>`
     display: inline-flex;
     align-items: center;
     padding: 6px 14px;
@@ -415,13 +438,39 @@ const ActionButton = styled.button`
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.3s ease, height 0.3s ease;
+        z-index: 0;
+    }
+
+    & > svg {
+        position: relative;
+        z-index: 1;
+    }
 
     &.view {
         &:hover {
             background: var(--light-blue);
             color: white;
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.1);
             box-shadow: 0 4px 12px rgba(46, 151, 197, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
         }
     }
 
@@ -429,8 +478,14 @@ const ActionButton = styled.button`
         &:hover {
             background: var(--purple);
             color: white;
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.1);
             box-shadow: 0 4px 12px rgba(150, 129, 158, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
         }
     }
 
@@ -438,8 +493,14 @@ const ActionButton = styled.button`
         &:hover {
             background: var(--danger);
             color: white;
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.1);
             box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
         }
     }
 

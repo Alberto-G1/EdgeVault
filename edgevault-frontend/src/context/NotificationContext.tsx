@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { getNotificationsForUser, getUnreadNotificationCount, markNotificationAsRead } from '../api/notificationService';
-import { toast } from 'react-hot-toast';
+import { useToast } from './ToastContext';
 
 export interface Notification {
     id: number;
@@ -23,6 +23,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { isAuthenticated, token } = useAuth();
+    const { showInfo, showError } = useToast();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
@@ -53,9 +54,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 console.log("Notification WebSocket connected.");
                 client.subscribe('/user/topic/notifications', (message) => {
                     const newNotification = JSON.parse(message.body) as Notification;
-                    toast.info(`New notification: ${newNotification.message}`, {
-                        icon: '🔔',
-                    });
+                    showInfo('New Notification', newNotification.message);
                     setNotifications(prev => [newNotification, ...prev]);
                     setUnreadCount(prev => prev + 1);
                 });
@@ -75,7 +74,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             }
         };
 
-    }, [isAuthenticated, token]);
+    }, [isAuthenticated, token, showInfo]);
     
     const markAsRead = async (id: number) => {
         const notification = notifications.find(n => n.id === id);
@@ -85,7 +84,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
                 setUnreadCount(prev => Math.max(0, prev - 1));
             } catch (error) {
-                toast.error("Failed to mark notification as read.");
+                showError("Error", "Failed to mark notification as read.");
             }
         }
     };

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyDepartmentDocuments, uploadDocument, requestDocumentDeletion } from '../../api/documentService';
 import type { Document } from '../../types/document';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Upload, FileText, Trash2, Search, Filter, Clock, User, FileUp, Eye } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
@@ -12,6 +12,7 @@ import Modal from '../../components/common/Modal';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const DocumentManagementPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -36,7 +37,7 @@ const DocumentManagementPage: React.FC = () => {
             const data = await getMyDepartmentDocuments();
             setDocuments(data);
         } catch (error) {
-            toast.error("Failed to fetch documents.");
+            showError('Error', 'Failed to fetch documents.');
         } finally {
             setLoading(false);
         }
@@ -67,21 +68,18 @@ const DocumentManagementPage: React.FC = () => {
 
     const handleUpload = async () => {
         if (!fileToUpload || !uploadTitle.trim()) {
-            toast.error("A title and a file are required to upload.");
+            showError('Validation Error', 'A title and a file are required to upload.');
             return;
         }
         setIsUploading(true);
         try {
-            await toast.promise(uploadDocument(uploadTitle, uploadDescription, fileToUpload), {
-                loading: 'Uploading document...',
-                success: 'Document uploaded successfully!',
-                error: (err) => err.response?.data?.message || 'Upload failed.',
-            });
+            await uploadDocument(uploadTitle, uploadDescription, fileToUpload);
+            showSuccess('Success', 'Document uploaded successfully!');
             setIsUploadModalOpen(false);
             resetUploadForm();
             fetchDocuments();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Upload Failed', error.response?.data?.message || 'Failed to upload document.');
         } finally {
             setIsUploading(false);
         }
@@ -103,14 +101,11 @@ const DocumentManagementPage: React.FC = () => {
 
         setIsDeleting(true);
         try {
-            await toast.promise(requestDocumentDeletion(documentToDelete), {
-                loading: 'Requesting deletion...',
-                success: 'Deletion requested successfully!',
-                error: (err) => err.response?.data?.message || 'Failed to request deletion.'
-            });
+            await requestDocumentDeletion(documentToDelete);
+            showSuccess('Success', 'Deletion requested successfully!');
             fetchDocuments();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Delete Failed', error.response?.data?.message || 'Failed to request deletion.');
         } finally {
             setIsDeleting(false);
             handleCloseConfirmModal();
@@ -245,7 +240,7 @@ const DocumentManagementPage: React.FC = () => {
                         <DocumentCard 
                             key={doc.id} 
                             onClick={() => navigate(`/admin/documents/${doc.id}`)}
-                            style={{ borderColor: colors.border, background: colors.bg }}
+                            style={{ borderColor: colors.border, background: colors.bg, animationDelay: `${index * 0.05}s` }}
                         >
                             <DocHeader>
                                 <DocIcon style={{ background: colors.icon }}>
@@ -645,10 +640,41 @@ const DocumentCard = styled.div`
     display: flex;
     flex-direction: column;
     cursor: pointer;
+    animation: slideUp 0.5s ease-out backwards;
+    position: relative;
+    overflow: hidden;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(to right, var(--light-blue), var(--purple));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+    }
 
     &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px var(--shadow);
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px var(--shadow);
+        
+        &::before {
+            transform: scaleX(1);
+        }
     }
 `;
 

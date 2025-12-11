@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getDashboardStats, getRecentActivity } from '../../api/dashboardService';
 import type { StatCard, RecentActivity } from '../../types/dashboard';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Users, FileText, LogIn, ClipboardCheck, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import styled from 'styled-components';
@@ -16,6 +16,7 @@ const iconMap = {
 };
 
 const DashboardPage: React.FC = () => {
+    const { showError } = useToast();
     const [stats, setStats] = useState<StatCard[]>([]);
     const [activities, setActivities] = useState<RecentActivity[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +32,7 @@ const DashboardPage: React.FC = () => {
                 setStats(statsData);
                 setActivities(activityData);
             } catch (error) {
-                toast.error("Failed to load dashboard data.");
+                showError('Error', 'Failed to load dashboard data.');
             } finally {
                 setLoading(false);
             }
@@ -51,8 +52,8 @@ const DashboardPage: React.FC = () => {
 
             {/* Stat Cards */}
             <StatsGrid>
-                {stats.map(stat => (
-                    <StatCard key={stat.title}>
+                {stats.map((stat, index) => (
+                    <StatCard key={stat.title} style={{ animationDelay: `${index * 0.1}s` }}>
                         <div className="stat-content">
                             <p className="stat-label">{stat.title}</p>
                             <p className="stat-value">{stat.value}</p>
@@ -69,7 +70,7 @@ const DashboardPage: React.FC = () => {
                 <h2 className="activity-title">Recent Activity</h2>
                 <ActivityList>
                     {activities.map((activity, index) => (
-                        <ActivityItem key={index}>
+                        <ActivityItem key={index} style={{ animationDelay: `${0.5 + index * 0.05}s` }}>
                             <p className="activity-main">
                                 <span className="username">{activity.username}</span>{' '}
                                 {activity.action.toLowerCase().replace(/_/g, ' ')}
@@ -91,6 +92,18 @@ const DashboardPage: React.FC = () => {
 const DashboardContainer = styled.div`
     width: 100%;
     padding: 30px;
+    animation: fadeIn 0.4s ease-in;
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     @media (max-width: 768px) {
         padding: 25px 20px;
@@ -103,6 +116,18 @@ const DashboardContainer = styled.div`
 
 const DashboardHeader = styled.div`
     margin-bottom: 40px;
+    animation: slideUp 0.5s ease-out backwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     .title {
         font-size: 36px;
@@ -158,10 +183,31 @@ const StatCard = styled.div`
     box-shadow: 0 4px 16px var(--shadow);
     transition: all 0.3s ease;
     font-family: 'Poppins', sans-serif;
+    animation: slideUp 0.5s ease-out backwards;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(to right, var(--light-blue), var(--purple));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+    }
 
     &:hover {
         transform: translateY(-6px);
-        box-shadow: 0 8px 24px var(--shadow);
+        box-shadow: 0 12px 32px var(--shadow);
+        border-color: var(--light-blue);
+        
+        &::before {
+            transform: scaleX(1);
+        }
     }
 
     .stat-content {
@@ -205,6 +251,16 @@ const StatCard = styled.div`
         align-items: center;
         justify-content: center;
         margin-left: 16px;
+        animation: pulse 2s ease-in-out infinite;
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
 
         @media (max-width: 480px) {
             width: 52px;
@@ -228,6 +284,7 @@ const ActivitySection = styled.div`
     padding: 32px;
     box-shadow: 0 4px 16px var(--shadow);
     font-family: 'Poppins', sans-serif;
+    animation: slideUp 0.5s ease-out 0.4s backwards;
 
     .activity-title {
         font-size: 24px;
@@ -265,6 +322,7 @@ const ActivityItem = styled.li`
     padding: 20px 0;
     border-bottom: 1px solid var(--border-color);
     transition: all 0.2s ease;
+    animation: slideUp 0.4s ease-out backwards;
 
     &:last-child {
         border-bottom: none;
@@ -277,6 +335,7 @@ const ActivityItem = styled.li`
         padding-left: 16px;
         padding-right: 16px;
         border-radius: 8px;
+        transform: translateX(4px);
     }
 
     .activity-main {

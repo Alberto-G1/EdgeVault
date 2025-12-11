@@ -45,7 +45,8 @@ const fadeIn = keyframes`
 
 const LayoutContainer = styled.div`
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background-color: var(--bg-primary);
 `;
 
@@ -53,6 +54,7 @@ const MainWrapper = styled.div`
     flex: 1;
     display: flex;
     flex-direction: column;
+    height: 100vh;
     overflow: hidden;
 
     @media (max-width: 576px) {
@@ -65,10 +67,31 @@ const MainContent = styled.main`
     overflow-x: hidden;
     overflow-y: auto;
     background-color: var(--bg-primary);
+    padding: 2rem;
+    
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: rgba(46, 151, 197, 0.5);
+        border-radius: 4px;
+        
+        &:hover {
+            background: rgba(46, 151, 197, 0.7);
+        }
+    }
 `;
 
 const PageTransition = styled.div`
     animation: ${fadeInUp} 0.4s ease-out;
+    min-height: 100%;
     
     @media (prefers-reduced-motion: reduce) {
         animation: ${fadeIn} 0.3s ease-out;

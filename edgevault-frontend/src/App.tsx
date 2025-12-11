@@ -1,6 +1,6 @@
-import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import AuthEnforcer from './components/auth/AuthEnforcer';
 import { NotificationProvider } from './context/NotificationContext';
 
@@ -8,10 +8,11 @@ function App() {
   return (
     <ThemeProvider>
         <AuthProvider>
-          <NotificationProvider>
-            <AuthEnforcer />
-            <Toaster position="top-right" />
-          </NotificationProvider>
+          <ToastProvider>
+            <NotificationProvider>
+              <AuthEnforcer />
+            </NotificationProvider>
+          </ToastProvider>
         </AuthProvider>
     </ThemeProvider>
   );

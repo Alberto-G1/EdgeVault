@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyProfile } from '../../api/profileService';
 import type { UserProfile } from '../../types/user';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { User, Briefcase, Mail, Phone, Calendar, MapPin, Building, Shield, Clock, Award, Activity, Globe, Star } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 
 const ProfilePage: React.FC = () => {
+    const { showError } = useToast();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -19,7 +20,7 @@ const ProfilePage: React.FC = () => {
                 const data = await getMyProfile();
                 setProfile(data);
             } catch (error) {
-                toast.error("Failed to fetch profile data.");
+                showError('Error', 'Failed to fetch profile data.');
             } finally {
                 setLoading(false);
             }
@@ -89,7 +90,7 @@ const ProfilePage: React.FC = () => {
                                 </StatIcon>
                                 <StatContent>
                                     <StatLabel>Status</StatLabel>
-                                    <StatValue active={profile.accountStatus === 'ACTIVE'}>
+                                    <StatValue $active={profile.accountStatus === 'ACTIVE'}>
                                         {profile.accountStatus || 'UNKNOWN'}
                                     </StatValue>
                                 </StatContent>
@@ -550,10 +551,10 @@ const StatLabel = styled.div`
     font-family: 'Poppins', sans-serif;
 `;
 
-const StatValue = styled.div<{ active?: boolean }>`
+const StatValue = styled.div<{ $active?: boolean }>`
     font-size: 0.9375rem;
     font-weight: 600;
-    color: ${props => props.active ? '#10B981' : 'var(--text-primary)'};
+    color: ${props => props.$active ? '#10B981' : 'var(--text-primary)'};
     font-family: 'Poppins', sans-serif;
 `;
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAllConversations } from '../../api/chatService';
 import type { ConversationSummary } from '../../types/chat';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Users, MessageCircle, Plus, Hash } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,6 +18,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
     const [loading, setLoading] = useState(true);
     const [showUserSearch, setShowUserSearch] = useState(false);
     const { user: currentUser } = useAuth();
+    const { showError } = useToast();
 
     const fetchConversations = async () => {
         try {
@@ -27,7 +28,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
             const directMessages = data.filter(c => c.type === 'DIRECT_MESSAGE');
             setConversations([...groupChats, ...directMessages]);
         } catch (error) {
-            toast.error("Failed to fetch conversations");
+            showError("Connection Error", "Failed to fetch conversations");
         } finally {
             setLoading(false);
         }
@@ -77,7 +78,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
                                     to={`/admin/chat/${conv.id}`}
                                     className={({ isActive }) => isActive ? 'active' : ''}
                                 >
-                                    <ConversationAvatar hasUnread={conv.unreadCount > 0}>
+                                    <ConversationAvatar $hasUnread={conv.unreadCount > 0}>
                                         <GroupIcon>
                                             <Users size={20} />
                                         </GroupIcon>
@@ -93,7 +94,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
                                             )}
                                         </ConversationHeader>
 
-                                        <LastMessage hasUnread={conv.unreadCount > 0}>
+                                        <LastMessage $hasUnread={conv.unreadCount > 0}>
                                             {conv.lastMessageSender && (
                                                 <Sender>{conv.lastMessageSender}: </Sender>
                                             )}
@@ -125,7 +126,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
                                             to={`/admin/chat/${conv.id}`}
                                             className={({ isActive }) => isActive ? 'active' : ''}
                                         >
-                                            <ConversationAvatar hasUnread={conv.unreadCount > 0}>
+                                            <ConversationAvatar $hasUnread={conv.unreadCount > 0}>
                                                 <UserAvatar
                                                     src={conv.otherParticipantProfilePicture || `https://ui-avatars.com/api/?name=${conv.otherParticipantUsername}&background=random&color=fff`}
                                                     alt={conv.name || ''}
@@ -140,7 +141,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewMessage }) => {
                                                     )}
                                                 </ConversationHeader>
 
-                                                <LastMessage hasUnread={conv.unreadCount > 0}>
+                                                <LastMessage $hasUnread={conv.unreadCount > 0}>
                                                     {conv.lastMessageSender && (
                                                         <Sender>{conv.lastMessageSender}: </Sender>
                                                     )}
@@ -343,7 +344,7 @@ const ConversationLink = styled(NavLink)`
     }
 `;
 
-const ConversationAvatar = styled.div<{ hasUnread?: boolean }>`
+const ConversationAvatar = styled.div<{ $hasUnread?: boolean }>`
     flex-shrink: 0;
     width: 48px;
     height: 48px;
@@ -479,7 +480,7 @@ const UnreadBadge = styled.div`
     }
 `;
 
-const LastMessage = styled.div<{ hasUnread: boolean }>`
+const LastMessage = styled.div<{ $hasUnread: boolean }>`
     font-size: 0.875rem;
     color: var(--text-secondary);
     white-space: nowrap;

@@ -29,7 +29,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                         {getUserInitials(user.username)}
                     </ProfilePicture>
                     <UserName>{user.username}</UserName>
-                    <StatusBadge enabled={user.enabled}>
+                    <StatusBadge $enabled={user.enabled}>
                         {user.enabled ? (
                             <>
                                 <CheckCircle size={14} /> Active
@@ -203,7 +203,7 @@ const UserName = styled.h2`
     }
 `;
 
-const StatusBadge = styled.span<{ enabled: boolean }>`
+const StatusBadge = styled.span<{ $enabled: boolean }>`
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -211,8 +211,8 @@ const StatusBadge = styled.span<{ enabled: boolean }>`
     border-radius: 20px;
     font-size: 13px;
     font-weight: 600;
-    background: ${props => props.enabled ? 'rgba(46, 211, 135, 0.1)' : 'rgba(231, 76, 60, 0.1)'};
-    color: ${props => props.enabled ? 'var(--success)' : 'var(--danger)'};
+    background: ${props => props.$enabled ? 'rgba(46, 211, 135, 0.1)' : 'rgba(231, 76, 60, 0.1)'};
+    color: ${props => props.$enabled ? 'var(--success)' : 'var(--danger)'};
 `;
 
 const DetailsGrid = styled.div`

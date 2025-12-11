@@ -5,13 +5,14 @@ import type { ChatMessage, Conversation } from '../../types/chat';
 import { getChatHistory, getDocumentConversation } from '../../api/chatService';
 import { useAuth } from '../../hooks/useAuth';
 import { Send } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 
 interface DocumentChatProps {
     documentId: number;
 }
 
 const DocumentChat: React.FC<DocumentChatProps> = ({ documentId }) => {
+    const { showError } = useToast();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [conversationId, setConversationId] = useState<number | null>(null);
@@ -30,7 +31,7 @@ const DocumentChat: React.FC<DocumentChatProps> = ({ documentId }) => {
                 const history = await getChatHistory(conversation.id);
                 setMessages(history);
             } catch (error) {
-                toast.error("Could not load chat history.");
+                showError('Error', 'Could not load chat history.');
             }
         };
         initializeChat();

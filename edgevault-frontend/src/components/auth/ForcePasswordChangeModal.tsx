@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { changeMyPassword } from '../../api/profileService';
-import { toast } from 'react-hot-toast';
 import { Lock } from 'lucide-react';
 
 const ForcePasswordChangeModal: React.FC = () => {
@@ -20,27 +19,23 @@ const ForcePasswordChangeModal: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            toast.error("New passwords do not match.");
+            showError('Password Mismatch', 'New passwords do not match.');
             return;
         }
         if (passwordData.newPassword === 'Default@123U') {
-            toast.error("New password cannot be the same as the default password.");
+            showError('Invalid Password', 'New password cannot be the same as the default password.');
             return;
         }
         setIsSubmitting(true);
         try {
-            const promise = changeMyPassword({
+            await changeMyPassword({
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword
             });
-            await toast.promise(promise, {
-                loading: 'Updating password...',
-                success: 'Password updated successfully! You can now use the system.',
-                error: (err) => err.response?.data?.message || 'Failed to update password.'
-            });
+            showSuccess('Success', 'Password updated successfully! You can now use the system.');
             fulfillPasswordChange(); // This will close the modal
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to update password.');
         } finally {
             setIsSubmitting(false);
         }

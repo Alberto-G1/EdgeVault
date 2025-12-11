@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDocumentDetails, downloadDocumentVersion, uploadNewVersion, updateVersionDescription, deleteVersion, requestDocumentDeletion } from '../../api/documentService';
 import type { Document } from '../../types/document';
-import { toast } from 'react-hot-toast';
 import { FileClock, Download, ArrowLeft, Upload, FileText, User, Calendar, GitBranch, Eye, ChevronDown, ChevronUp, Edit2, Trash2, Trash } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
@@ -13,6 +12,7 @@ import ConfirmationModal from '../../components/common/ConfirmationModal';
 import DocumentChat from '../../components/document/DocumentChat';
 
 const DocumentDetailPage: React.FC = () => {
+    const { showError } = useToast();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [document, setDocument] = useState<Document | null>(null);
@@ -50,7 +50,7 @@ const DocumentDetailPage: React.FC = () => {
                 setExpandedVersion(data.versionHistory[0].id);
             }
         } catch (error) {
-            toast.error("Could not load document details.");
+            showError('Error', 'Could not load document details.');
             navigate('/admin/documents');
         } finally {
             setLoading(false);
@@ -74,9 +74,9 @@ const DocumentDetailPage: React.FC = () => {
             if (link.parentNode) {
                 link.parentNode.removeChild(link);
             }
-            toast.success('Download started!');
+            showSuccess('Success', 'Download started!');
         } catch (error) {
-            toast.error('Download failed.');
+            showError('Error', 'Download failed.');
             console.error("Download error:", error);
         }
     };
@@ -89,17 +89,13 @@ const DocumentDetailPage: React.FC = () => {
 
     const handleUploadNewVersion = async () => {
         if (!fileToUpload || !document) {
-            toast.error("Please select a file to upload.");
+            showError('Validation Error', 'Please select a file to upload.');
             return;
         }
         setIsUploading(true);
         try {
-            const promise = uploadNewVersion(document.id, fileToUpload, versionDescription);
-            const updatedDocument = await toast.promise(promise, {
-                loading: 'Uploading new version...',
-                success: 'New version uploaded successfully!',
-                error: (err) => err.response?.data?.message || 'Upload failed.',
-            });
+            const updatedDocument = await uploadNewVersion(document.id, fileToUpload, versionDescription);
+            showSuccess('Success', 'New version uploaded successfully!');
             setDocument(updatedDocument);
             setIsUploadModalOpen(false);
             setFileToUpload(null);
@@ -108,8 +104,8 @@ const DocumentDetailPage: React.FC = () => {
             if (updatedDocument.versionHistory.length > 0) {
                 setExpandedVersion(updatedDocument.versionHistory[0].id);
             }
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Upload failed.');
         } finally {
             setIsUploading(false);
         }
@@ -130,11 +126,11 @@ const DocumentDetailPage: React.FC = () => {
         setIsUpdating(true);
         try {
             await updateVersionDescription(editingVersionId, editDescription);
-            toast.success('Version description updated successfully!');
+            showSuccess('Success', 'Version description updated successfully!');
             setIsEditModalOpen(false);
             fetchDetails(); // Refresh document details
         } catch (error) {
-            toast.error('Failed to update version description.');
+            showError('Error', 'Failed to update version description.');
         } finally {
             setIsUpdating(false);
         }
@@ -150,12 +146,12 @@ const DocumentDetailPage: React.FC = () => {
         setIsDeleting(true);
         try {
             const updatedDocument = await deleteVersion(deletingVersionId);
-            toast.success('Version deleted successfully!');
+            showSuccess('Success', 'Version deleted successfully!');
             setDocument(updatedDocument);
             setIsDeleteConfirmOpen(false);
             setDeletingVersionId(null);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to delete version.');
+            showError('Error', error.response?.data?.message || 'Failed to delete version.');
         } finally {
             setIsDeleting(false);
         }
@@ -166,11 +162,11 @@ const DocumentDetailPage: React.FC = () => {
         setIsRequestingDeletion(true);
         try {
             await requestDocumentDeletion(document.id);
-            toast.success('Document deletion request submitted successfully! It will be reviewed by an administrator.');
+            showSuccess('Success', 'Document deletion request submitted successfully! It will be reviewed by an administrator.');
             setIsDeleteDocConfirmOpen(false);
             navigate('/admin/documents');
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to request document deletion.');
+            showError('Error', error.response?.data?.message || 'Failed to request document deletion.');
         } finally {
             setIsRequestingDeletion(false);
         }

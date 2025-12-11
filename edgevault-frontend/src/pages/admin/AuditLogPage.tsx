@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { getAuditLogs } from '../../api/auditService';
 import type { AuditLog } from '../../types/audit';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { ShieldCheck, ShieldAlert, Search, Filter, Calendar, User, Activity, Lock, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 
 const AuditLogPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [verificationStatus, setVerificationStatus] = useState<'VERIFYING' | 'VALID' | 'INVALID'>('VERIFYING');
@@ -27,7 +28,7 @@ const AuditLogPage: React.FC = () => {
                 setLogs(sortedLogs);
                 verifyChain(sortedLogs);
             } catch (error) {
-                toast.error("Failed to fetch audit logs.");
+                showError('Error', 'Failed to fetch audit logs.');
                 setVerificationStatus('INVALID');
             } finally {
                 setLoading(false);
@@ -51,12 +52,12 @@ const AuditLogPage: React.FC = () => {
 
             if (currentLog.previousHash !== previousHash) {
                 setVerificationStatus('INVALID');
-                toast.error(`Tampering detected! Chain broken at log ID: ${currentLog.id}`);
+                showError('Security Alert', `Tampering detected! Chain broken at log ID: ${currentLog.id}`);
                 return;
             }
         }
         setVerificationStatus('VALID');
-        toast.success('Audit chain verified successfully!');
+        showSuccess('Verified', 'Audit chain verified successfully!');
     };
 
     const users = Array.from(new Set(logs.map(log => log.username)));
@@ -139,7 +140,7 @@ const AuditLogPage: React.FC = () => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
         
-        toast.success('Audit logs exported successfully!');
+        showSuccess('Success', 'Audit logs exported successfully!');
     };
 
     if (loading) {
@@ -162,7 +163,7 @@ const AuditLogPage: React.FC = () => {
                 </PageHeaderContent>
                 
                 <HeaderActions>
-                    <VerificationBadge status={verificationStatus}>
+                    <VerificationBadge $status={verificationStatus}>
                         {verificationStatus === 'VALID' ? (
                             <>
                                 <ShieldCheck size={16} />
@@ -348,7 +349,7 @@ const AuditLogPage: React.FC = () => {
                                                 </DetailsCell>
                                             </TableCell>
                                             <TableCell>
-                                                <HashCell valid={isHashValid}>
+                                                <HashCell $valid={isHashValid}>
                                                     <Lock size={12} />
                                                     {isHashValid ? '✓ Valid' : '✗ Invalid'}
                                                 </HashCell>
@@ -532,7 +533,7 @@ const HeaderActions = styled.div`
     }
 `;
 
-const VerificationBadge = styled.div<{ status: string }>`
+const VerificationBadge = styled.div<{ $status: string }>`
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -853,7 +854,7 @@ const DetailsCell = styled.div`
     white-space: nowrap;
 `;
 
-const HashCell = styled.div<{ valid: boolean }>`
+const HashCell = styled.div<{ $valid: boolean }>`
     display: flex;
     align-items: center;
     gap: 0.5rem;
