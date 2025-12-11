@@ -18,4 +18,6 @@ public class ChatMessageDto {
     private String senderProfilePictureUrl;
     private String content;
     private LocalDateTime timestamp;
+    private long readCount;
+    private long totalRecipients;
 }
