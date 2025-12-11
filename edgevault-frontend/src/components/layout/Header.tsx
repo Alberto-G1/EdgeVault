@@ -9,9 +9,11 @@ import ExpandableButton from '../common/ExpandableButton';
 import { Link } from 'react-router-dom';
 import { User, ChevronDown, Settings, HelpCircle, Info } from 'lucide-react';
 import styled from 'styled-components';
+import { useToast } from '../../context/ToastContext';
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
+    const { showSuccess } = useToast();
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,10 @@ const Header: React.FC = () => {
                 <ExpandableButton 
                     icon={logoutIcon}
                     text="Logout"
-                    onClick={logout}
+                    onClick={() => {
+                        logout();
+                        showSuccess('Logged Out', 'You have been successfully logged out.');
+                    }}
                     bgColor="rgb(231, 76, 60)"
                     hoverWidth="125px"
                 />

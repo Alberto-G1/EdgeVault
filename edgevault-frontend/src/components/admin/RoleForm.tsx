@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Role } from '../../types/user';
 import { getAllPermissions } from '../../api/permissionService';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 
 interface RoleFormProps {
     roleToEdit?: Role | null;
@@ -11,6 +11,7 @@ interface RoleFormProps {
 }
 
 const RoleForm: React.FC<RoleFormProps> = ({ roleToEdit, onSave, onCancel, isLoading }) => {
+    const { showError } = useToast();
     const [name, setName] = useState('');
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
     const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
@@ -21,7 +22,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleToEdit, onSave, onCancel, isLoa
                 const perms = await getAllPermissions();
                 setAvailablePermissions(perms);
             } catch (error) {
-                toast.error("Failed to load permissions.");
+                showError('Error', 'Failed to load permissions.');
             }
         };
         fetchPermissions();

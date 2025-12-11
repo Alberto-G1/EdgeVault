@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyProfile, updateMyProfile, updateMyWorkProfile } from '../../api/profileService';
 import type { UserProfile } from '../../types/user';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, Building, Upload, Key, Eye, EyeOff } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
@@ -10,6 +10,7 @@ import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 
 const ProfileEditPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
@@ -46,9 +47,9 @@ const ProfileEditPage: React.FC = () => {
                     employeeId: data.employeeId || '', jobTitle: data.jobTitle || '',
                     dateJoined: data.dateJoined || '', supervisorName: data.supervisorName || ''
                 });
-            } catch (error) { 
-                toast.error("Failed to fetch profile data."); 
-            } finally { 
+            } catch (error) {
+                showError('Error', 'Failed to fetch profile data.'); 
+            } finally {
                 setLoading(false); 
             }
         };
@@ -60,14 +61,14 @@ const ProfileEditPage: React.FC = () => {
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast.error("File is too large! Maximum size is 5MB.");
+            showError('File Too Large', 'File is too large! Maximum size is 5MB.');
             return;
         }
 
         const reader = new FileReader();
         reader.onloadend = () => {
             setPersonalData(prev => ({ ...prev, profilePictureUrl: reader.result as string }));
-            toast.success('Profile picture updated!');
+            showSuccess('Success', 'Profile picture updated!');
         };
         reader.readAsDataURL(file);
     };
@@ -89,22 +90,15 @@ const ProfileEditPage: React.FC = () => {
             gender: personalData.gender === '' ? null : personalData.gender,
         };
 
-        const personalPromise = updateMyProfile(personalPayload as any);
-        const promises = [personalPromise];
-
-        if (hasPermission('WORK_PROFILE_EDIT')) {
-            promises.push(updateMyWorkProfile(workData as any));
-        }
-        
         try {
-            await toast.promise(Promise.all(promises), {
-                loading: 'Saving profile...',
-                success: 'Profile saved successfully!',
-                error: (err) => err.response?.data?.message || 'Failed to save.'
-            });
+            await updateMyProfile(personalPayload as any);
+            if (hasPermission('WORK_PROFILE_EDIT')) {
+                await updateMyWorkProfile(workData as any);
+            }
+            showSuccess('Success', 'Profile saved successfully!');
             navigate('/admin/profile');
-        } catch (error) {
-            console.error("Save failed:", error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to save.');
         }
     };
 

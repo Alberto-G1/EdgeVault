@@ -5,7 +5,6 @@ import type { ChatMessage, TypingIndicator, UserPresence } from '../../types/cha
 import { getChatHistory, markConversationAsRead, getAllUserPresences } from '../../api/chatService';
 import { useAuth } from '../../hooks/useAuth';
 import { Send, Loader } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import styled from 'styled-components';
 
@@ -14,6 +13,7 @@ interface MessagePanelProps {
 }
 
 const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
+    const { showError } = useToast();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loadingHistory, setLoadingHistory] = useState(true);
@@ -55,7 +55,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
                 // Mark conversation as read
                 await markConversationAsRead(conversationId);
             } catch (error) {
-                toast.error("Could not load chat history.");
+                showError('Error', 'Could not load chat history.');
             } finally {
                 setLoadingHistory(false);
             }
@@ -167,7 +167,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
                 clearTimeout(typingTimeoutRef.current);
             }
         } else if (!stompClientRef.current?.connected) {
-            toast.error("Cannot send message. Not connected to chat server.");
+            showError('Connection Error', 'Cannot send message. Not connected to chat server.');
         }
     };
 
@@ -219,7 +219,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ conversationId }) => {
                                             src={msg.senderProfilePictureUrl || `https://ui-avatars.com/api/?name=${msg.senderUsername}&background=random&color=fff`}
                                             alt={msg.senderUsername}
                                         />
-                                        <PresenceIndicator status={presenceStatus} />
+                                        <PresenceIndicator $status={presenceStatus} />
                                     </AvatarContainer>
                                 )}
                                 
@@ -411,14 +411,14 @@ const Avatar = styled.img`
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 `;
 
-const PresenceIndicator = styled.div<{ status: string }>`
+const PresenceIndicator = styled.div<{ $status: string }>`
     position: absolute;
     bottom: 0;
     right: 0;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: ${props => props.status === 'ONLINE' ? '#10b981' : '#6b7280'};
+    background: ${props => props.$status === 'ONLINE' ? '#10b981' : '#6b7280'};
     border: 2px solid var(--bg-secondary);
 `;
 

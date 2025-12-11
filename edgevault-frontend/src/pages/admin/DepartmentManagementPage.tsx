@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAllDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departmentService';
 import type { Department } from '../../types/user';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Edit, Trash2, Building, Users, Search, Filter, Briefcase } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
@@ -9,6 +9,7 @@ import HoverButton from '../../components/common/HoverButton';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const DepartmentManagementPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +30,7 @@ const DepartmentManagementPage: React.FC = () => {
             const data = await getAllDepartments();
             setDepartments(data);
         } catch (error) {
-            toast.error('Failed to fetch departments.');
+            showError('Error', 'Failed to fetch departments.');
         } finally {
             setLoading(false);
         }
@@ -57,20 +58,18 @@ const DepartmentManagementPage: React.FC = () => {
         e.preventDefault();
         setIsSubmitting(true);
         
-        const promise = currentDept
-            ? updateDepartment(currentDept.id, deptName, deptDescription)
-            : createDepartment(deptName, deptDescription);
-            
         try {
-            await toast.promise(promise, {
-                loading: 'Saving department...',
-                success: `Department ${currentDept ? 'updated' : 'created'}!`,
-                error: (err) => err.response?.data?.message || 'Failed to save.',
-            });
+            if (currentDept) {
+                await updateDepartment(currentDept.id, deptName, deptDescription);
+                showSuccess('Success', 'Department updated!');
+            } else {
+                await createDepartment(deptName, deptDescription);
+                showSuccess('Success', 'Department created!');
+            }
             handleCloseModal();
             fetchDepartments();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to save.');
         } finally {
             setIsSubmitting(false);
         }
@@ -86,16 +85,13 @@ const DepartmentManagementPage: React.FC = () => {
         
         setIsDeleting(true);
         try {
-            await toast.promise(deleteDepartment(departmentToDelete), {
-                loading: 'Deleting...',
-                success: 'Department deleted!',
-                error: (err) => err.response?.data?.message || 'Failed to delete.',
-            });
+            await deleteDepartment(departmentToDelete);
+            showSuccess('Success', 'Department deleted!');
             fetchDepartments();
             setIsDeleteModalOpen(false);
             setDepartmentToDelete(null);
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to delete.');
         } finally {
             setIsDeleting(false);
         }
@@ -267,7 +263,7 @@ const DepartmentManagementPage: React.FC = () => {
                 </EmptyState>
             )}
 
-            <CustomModal isOpen={isModalOpen} onClick={handleCloseModal}>
+            <CustomModal $isOpen={isModalOpen} onClick={handleCloseModal}>
                 <ModalWrapper onClick={(e) => e.stopPropagation()}>
                     <ModalHeader>
                         <ModalTitle>
@@ -743,7 +739,7 @@ const EmptySubtext = styled.p`
     font-family: 'Poppins', sans-serif;
 `;
 
-const CustomModal = styled.div<{ isOpen: boolean }>`
+const CustomModal = styled.div<{ $isOpen: boolean }>`
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);

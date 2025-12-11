@@ -24,11 +24,11 @@ const ChatPage: React.FC = () => {
                     </MobileHeaderTitle>
                 </MobileHeader>
 
-                <SidebarContainer showOnMobile={showSidebar}>
+                <SidebarContainer $showOnMobile={showSidebar}>
                     <ChatSidebar />
                 </SidebarContainer>
 
-                <MainPanel showOnMobile={!showSidebar}>
+                <MainPanel $showOnMobile={!showSidebar}>
                     {activeConversationId ? (
                         <MessagePanel key={activeConversationId} conversationId={activeConversationId} />
                     ) : (
@@ -146,7 +146,7 @@ const MobileHeaderTitle = styled.div`
     color: var(--text-primary);
 `;
 
-const SidebarContainer = styled.div<{ showOnMobile?: boolean }>`
+const SidebarContainer = styled.div<{ $showOnMobile?: boolean }>`
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -169,7 +169,7 @@ const SidebarContainer = styled.div<{ showOnMobile?: boolean }>`
     }
 `;
 
-const MainPanel = styled.div<{ showOnMobile?: boolean }>`
+const MainPanel = styled.div<{ $showOnMobile?: boolean }>`
     flex: 1;
     display: flex;
     flex-direction: column;

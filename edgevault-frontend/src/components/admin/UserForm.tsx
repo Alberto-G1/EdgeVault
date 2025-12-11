@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, Department, Role } from '../../types/user';
 import { getAllDepartments } from '../../api/departmentService';
 import { getAllRoles } from '../../api/roleService';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import styled from 'styled-components';
 import { 
   User as UserIcon, 
@@ -14,6 +14,7 @@ import {
   X,
   Key,
   Lock,
+  Unlock,
   Sparkles
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ interface UserFormProps {
 }
 
 const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoading }) => {
+    const { showError } = useToast();
     const isEditMode = !!userToEdit;
     const [departments, setDepartments] = useState<Department[]>([]);
     const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
@@ -51,7 +53,7 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                     setFormData(prev => ({ ...prev, departmentId: String(depts[0].id) }));
                 }
             } catch (error) {
-                toast.error("Could not load form data (roles/departments).");
+                showError('Error', 'Could not load form data (roles/departments).');
             }
         };
         fetchFormData();
@@ -222,20 +224,20 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                 {isEditMode && (
                     <StatusCard>
                         <StatusHeader>
-                            <StatusIcon active={formData.enabled}>
+                            <StatusIcon $active={formData.enabled}>
                                 {formData.enabled ? <Unlock size={20} /> : <Lock size={20} />}
                             </StatusIcon>
                             <StatusTitle>Account Status</StatusTitle>
                         </StatusHeader>
                         <StatusToggle>
                             <StatusOption 
-                                active={formData.enabled}
+                                $active={formData.enabled}
                                 onClick={() => setFormData(prev => ({ ...prev, enabled: true }))}
                             >
                                 Active
                             </StatusOption>
                             <StatusOption 
-                                active={!formData.enabled}
+                                $active={!formData.enabled}
                                 onClick={() => setFormData(prev => ({ ...prev, enabled: false }))}
                             >
                                 Inactive
@@ -605,10 +607,10 @@ const StatusHeader = styled.div`
     margin-bottom: 1rem;
 `;
 
-const StatusIcon = styled.div<{ active: boolean }>`
+const StatusIcon = styled.div<{ $active: boolean }>`
     width: 40px;
     height: 40px;
-    background: ${props => props.active 
+    background: ${props => props.$active 
         ? 'linear-gradient(135deg, rgb(46, 211, 135), rgb(26, 191, 115))' 
         : 'linear-gradient(135deg, rgb(231, 76, 60), rgb(211, 56, 40))'};
     border-radius: 10px;
@@ -635,13 +637,13 @@ const StatusToggle = styled.div`
     border: 2px solid var(--border-color);
 `;
 
-const StatusOption = styled.div<{ active: boolean }>`
+const StatusOption = styled.div<{ $active: boolean }>`
     flex: 1;
     padding: 0.75rem 1rem;
-    background: ${props => props.active 
+    background: ${props => props.$active 
         ? 'linear-gradient(135deg, rgb(150, 129, 158), rgb(120, 99, 128))' 
         : 'transparent'};
-    color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+    color: ${props => props.$active ? 'white' : 'var(--text-secondary)'};
     border-radius: 10px;
     font-weight: 600;
     text-align: center;

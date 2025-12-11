@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
@@ -14,6 +14,7 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { showSuccess, showError } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,10 +24,10 @@ const LoginPage: React.FC = () => {
             const response = await apiClient.post('/auth/login', { username, password, rememberMe });
             const { token, permissions, passwordChangeRequired } = response.data;
             login(token, permissions, passwordChangeRequired);
-            toast.success('Login successful!');
+            showSuccess('Success', 'Login successful!');
             navigate('/admin/dashboard');
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
+            showError('Login Failed', err.response?.data?.message || 'Please check your credentials.');
         } finally {
             setLoading(false);
         }

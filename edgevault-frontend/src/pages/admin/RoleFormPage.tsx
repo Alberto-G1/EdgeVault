@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRoleById, createRole, updateRole } from '../../api/roleService';
 import { getAllPermissions } from '../../api/permissionService';
-import { toast } from 'react-hot-toast';
 import { ArrowLeft, ShieldCheck, Crown, Key, Lock, Check, X } from 'lucide-react';
 import styled from 'styled-components';
 import type { Role } from '../../types/user';
@@ -10,6 +9,7 @@ import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 
 const RoleFormPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     
@@ -34,7 +34,7 @@ const RoleFormPage: React.FC = () => {
                     setSelectedPermissions(roleData.permissions);
                 }
             } catch (error) {
-                toast.error("Failed to load data. Redirecting...");
+                showError('Error', 'Failed to load data. Redirecting...');
                 navigate('/admin/roles');
             } finally {
                 setLoading(false);
@@ -86,19 +86,17 @@ const RoleFormPage: React.FC = () => {
         setIsSubmitting(true);
         const roleData = { name, permissions: selectedPermissions };
 
-        const promise = isEditMode
-            ? updateRole(Number(id), roleData)
-            : createRole(roleData);
-
         try {
-            await toast.promise(promise, {
-                loading: 'Saving role...',
-                success: `Role ${isEditMode ? 'updated' : 'created'} successfully!`,
-                error: (err) => err.response?.data?.message || 'Failed to save role.',
-            });
+            if (isEditMode) {
+                await updateRole(Number(id), roleData);
+                showSuccess('Success', 'Role updated successfully!');
+            } else {
+                await createRole(roleData);
+                showSuccess('Success', 'Role created successfully!');
+            }
             navigate('/admin/roles');
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to save role.');
         } finally {
             setIsSubmitting(false);
         }

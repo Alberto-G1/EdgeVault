@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
-import { toast } from 'react-hot-toast';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 
 const ResetPasswordPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [searchParams] = useSearchParams();
     const [token, setToken] = useState<string>('');
     const [newPassword, setNewPassword] = useState('');
@@ -18,7 +18,7 @@ const ResetPasswordPage: React.FC = () => {
     useEffect(() => {
         const tokenParam = searchParams.get('token');
         if (!tokenParam) {
-            toast.error('Invalid or missing reset token');
+            showError('Invalid Token', 'Invalid or missing reset token');
             navigate('/login');
         } else {
             setToken(tokenParam);
@@ -27,12 +27,12 @@ const ResetPasswordPage: React.FC = () => {
 
     const validatePassword = (): boolean => {
         if (newPassword.length < 8) {
-            toast.error('Password must be at least 8 characters long');
+            showError('Invalid Password', 'Password must be at least 8 characters long');
             return false;
         }
 
         if (newPassword !== confirmPassword) {
-            toast.error('Passwords do not match');
+            showError('Password Mismatch', 'Passwords do not match');
             return false;
         }
 
@@ -43,7 +43,7 @@ const ResetPasswordPage: React.FC = () => {
         const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
         if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-            toast.error('Password must contain uppercase, lowercase, and numbers');
+            showError('Weak Password', 'Password must contain uppercase, lowercase, and numbers');
             return false;
         }
 
@@ -64,13 +64,13 @@ const ResetPasswordPage: React.FC = () => {
                 token,
                 newPassword
             });
-            toast.success(response.data.message);
+            showSuccess('Success', response.data.message);
             setSuccess(true);
             setTimeout(() => {
                 navigate('/login');
             }, 3000);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to reset password. The link may have expired.');
+            showError('Error', err.response?.data?.message || 'Failed to reset password. The link may have expired.');
         } finally {
             setLoading(false);
         }

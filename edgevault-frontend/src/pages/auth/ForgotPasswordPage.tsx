@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
-import { toast } from 'react-hot-toast';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 
 const ForgotPasswordPage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -16,7 +16,7 @@ const ForgotPasswordPage: React.FC = () => {
         e.preventDefault();
         
         if (!email || !/\S+@\S+\.\S+/.test(email)) {
-            toast.error('Please enter a valid email address');
+            showError('Invalid Email', 'Please enter a valid email address');
             return;
         }
 
@@ -24,10 +24,10 @@ const ForgotPasswordPage: React.FC = () => {
 
         try {
             const response = await apiClient.post('/auth/forgot-password', { email });
-            toast.success(response.data.message);
+            showSuccess('Success', response.data.message);
             setSubmitted(true);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to send reset email. Please try again.');
+            showError('Error', err.response?.data?.message || 'Failed to send reset email. Please try again.');
         } finally {
             setLoading(false);
         }

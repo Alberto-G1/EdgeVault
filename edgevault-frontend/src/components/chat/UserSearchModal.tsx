@@ -3,7 +3,7 @@ import { searchUsers, startDirectMessage } from '../../api/chatService';
 import type { User } from '../../types/user';
 import { X, Search, Loader } from 'lucide-react';
 import styled from 'styled-components';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 
 interface UserSearchModalProps {
@@ -12,6 +12,7 @@ interface UserSearchModalProps {
 }
 
 const UserSearchModal: React.FC<UserSearchModalProps> = ({ isOpen, onClose }) => {
+    const { showError } = useToast();
     const [query, setQuery] = useState('');
     const [users, setUsers] = useState<User[]>([]);
     const [topUsers, setTopUsers] = useState<User[]>([]);
@@ -49,7 +50,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({ isOpen, onClose }) =>
                 const results = await searchUsers(query);
                 setUsers(results);
             } catch (error) {
-                toast.error('Failed to search users');
+                showError('Error', 'Failed to search users');
             } finally {
                 setLoading(false);
             }
@@ -64,7 +65,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({ isOpen, onClose }) =>
             navigate(`/admin/chat/${conversation.id}`);
             onClose();
         } catch (error) {
-            toast.error(`Could not start conversation with ${username}`);
+            showError('Error', `Could not start conversation with ${username}`);
         }
     };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getPendingDeletions, approveDeletion, rejectDeletion } from '../../api/documentService';
 import type { DocumentApproval } from '../../types/document';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../../context/ToastContext';
 import { Check, X, ShieldQuestion, Search, Filter, User, Building, Calendar, FileText, AlertCircle, Clock, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import Loader from '../../components/common/Loader';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const ApprovalQueuePage: React.FC = () => {
+    const { showError, showSuccess } = useToast();
     const [pendingDocs, setPendingDocs] = useState<DocumentApproval[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -28,10 +29,10 @@ const ApprovalQueuePage: React.FC = () => {
     // Permission check on component mount
     useEffect(() => {
         if (!hasPermission('DOCUMENT_APPROVAL')) {
-            toast.error("You don't have permission to access this page.");
+            showError('Permission Denied', "You don't have permission to access this page.");
             navigate('/admin/dashboard');
         }
-    }, [hasPermission, navigate]);
+    }, [hasPermission, navigate, showError]);
 
     const fetchPendingDocuments = useCallback(async () => {
         if (!hasPermission('DOCUMENT_APPROVAL')) {
@@ -43,7 +44,7 @@ const ApprovalQueuePage: React.FC = () => {
             const data = await getPendingDeletions();
             setPendingDocs(data);
         } catch (error) {
-            toast.error("Failed to fetch approval queue.");
+            showError('Error', 'Failed to fetch approval queue.');
         } finally {
             setLoading(false);
         }
@@ -122,14 +123,11 @@ const ApprovalQueuePage: React.FC = () => {
         
         setIsProcessing(true);
         try {
-            await toast.promise(approveDeletion(selectedDoc.documentId), {
-                loading: 'Approving deletion...',
-                success: 'Deletion approved successfully!',
-                error: (err) => err.response?.data?.message || 'Failed to approve deletion.',
-            });
+            await approveDeletion(selectedDoc.documentId);
+            showSuccess('Success', 'Deletion approved successfully!');
             fetchPendingDocuments();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to approve deletion.');
         } finally {
             setIsProcessing(false);
             setIsApproveModalOpen(false);
@@ -142,14 +140,11 @@ const ApprovalQueuePage: React.FC = () => {
         
         setIsProcessing(true);
         try {
-            await toast.promise(rejectDeletion(selectedDoc.documentId), {
-                loading: 'Rejecting deletion...',
-                success: 'Deletion rejected!',
-                error: (err) => err.response?.data?.message || 'Failed to reject deletion.',
-            });
+            await rejectDeletion(selectedDoc.documentId);
+            showSuccess('Success', 'Deletion rejected!');
             fetchPendingDocuments();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to reject deletion.');
         } finally {
             setIsProcessing(false);
             setIsRejectModalOpen(false);
