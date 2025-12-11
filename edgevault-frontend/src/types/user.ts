@@ -1,6 +1,7 @@
 export interface Department {
     id: number;
     name: string;
+    description?: string;
 }
 
 export interface Role {
@@ -14,7 +15,7 @@ export interface User {
     username: string;
     email?: string; 
     enabled?: boolean;
-    roles?: Pick<Role, 'name'>[]; 
+    roles?: string[]; 
     departmentName?: string;
     profilePictureUrl?: string;
 }

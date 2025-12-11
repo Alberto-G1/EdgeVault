@@ -34,8 +34,15 @@ public class ChatService {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
-        // Security Check: Ensure user is part of the conversation (or if it's the global chat)
-        if (conversation.getType() != ConversationType.GROUP && !conversation.getParticipants().contains(sender)) {
+        // Security Check: For DOCUMENT conversations, add user as participant if not already
+        // For other types, ensure user is part of the conversation (or if it's the global chat)
+        if (conversation.getType() == ConversationType.DOCUMENT) {
+            // For document conversations, automatically add user as participant if not already
+            if (!conversation.getParticipants().contains(sender)) {
+                conversation.getParticipants().add(sender);
+                conversationRepository.save(conversation);
+            }
+        } else if (conversation.getType() != ConversationType.GROUP && !conversation.getParticipants().contains(sender)) {
             throw new AccessDeniedException("User is not a participant of this conversation.");
         }
 
@@ -78,6 +85,31 @@ public class ChatService {
 
                     return savedDm;
                 });
+    }
+
+    // --- METHOD FOR DOCUMENT CONVERSATIONS ---
+    @Transactional
+    public Conversation getOrCreateDocumentConversation(Long documentId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        
+        Conversation conversation = conversationRepository.findByDocumentIdAndType(documentId, ConversationType.DOCUMENT)
+                .orElseGet(() -> {
+                    Conversation newConvo = new Conversation();
+                    newConvo.setType(ConversationType.DOCUMENT);
+                    newConvo.setDocumentId(documentId);
+                    newConvo.setName("Document #" + documentId + " Chat");
+                    newConvo.setCreatedAt(LocalDateTime.now());
+                    return conversationRepository.save(newConvo);
+                });
+        
+        // Add user as participant if not already
+        if (!conversation.getParticipants().contains(user)) {
+            conversation.getParticipants().add(user);
+            conversationRepository.save(conversation);
+        }
+        
+        return conversation;
     }
 
     public ChatMessageDto mapToChatMessageDto(ChatMessage message) {

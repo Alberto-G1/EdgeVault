@@ -5,6 +5,7 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true, // Enable sending cookies with requests
 });
 
 // Interceptor to add the JWT token to every request

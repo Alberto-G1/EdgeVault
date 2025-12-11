@@ -74,13 +74,30 @@ public class DocumentController {
     @PreAuthorize("hasAuthority('DOCUMENT_UPDATE')")
     public ResponseEntity<DocumentResponseDto> uploadNewVersion(
             @PathVariable Long documentId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "description", required = false) String description) {
         try {
-            DocumentResponseDto response = documentService.uploadNewVersion(documentId, file);
+            DocumentResponseDto response = documentService.uploadNewVersion(documentId, file, description);
             return ResponseEntity.ok(response);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @PutMapping("/versions/{versionId}")
+    @PreAuthorize("hasAuthority('DOCUMENT_UPDATE')")
+    public ResponseEntity<Void> updateVersionDescription(
+            @PathVariable Long versionId,
+            @RequestParam("description") String description) {
+        documentService.updateVersionDescription(versionId, description);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/versions/{versionId}")
+    @PreAuthorize("hasAuthority('DOCUMENT_DELETE')")
+    public ResponseEntity<DocumentResponseDto> deleteVersion(@PathVariable Long versionId) {
+        DocumentResponseDto response = documentService.deleteVersion(versionId);
+        return ResponseEntity.ok(response);
     }
 
     // --- ENDPOINTS for APPROVAL WORKFLOW ---

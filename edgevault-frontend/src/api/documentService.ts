@@ -35,9 +35,12 @@ export const getMyDepartmentDocuments = async (): Promise<Document[]> => {
 // - uploadNewVersion(documentId: number, file: File)
 // - getDocumentDetails(documentId: number)    
 
-export const uploadNewVersion = async (documentId: number, file: File): Promise<Document> => {
+export const uploadNewVersion = async (documentId: number, file: File, description?: string): Promise<Document> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (description) {
+        formData.append('description', description);
+    }
 
     const response = await apiClient.post<Document>(`/documents/${documentId}/versions`, formData, {
         headers: {
@@ -88,4 +91,15 @@ export const approveDeletion = async (id: number): Promise<void> => {
 
 export const rejectDeletion = async (id: number): Promise<void> => {
     await apiClient.post(`/documents/${id}/reject-deletion`);
+};
+
+export const updateVersionDescription = async (versionId: number, description: string): Promise<void> => {
+    await apiClient.put(`/documents/versions/${versionId}`, null, {
+        params: { description }
+    });
+};
+
+export const deleteVersion = async (versionId: number): Promise<Document> => {
+    const response = await apiClient.delete<Document>(`/documents/versions/${versionId}`);
+    return response.data;
 };

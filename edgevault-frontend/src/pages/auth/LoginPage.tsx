@@ -10,6 +10,7 @@ import HoverButton from '../../components/common/HoverButton';
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('Administrator');
     const [password, setPassword] = useState('Admin@123');
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -19,7 +20,7 @@ const LoginPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await apiClient.post('/auth/login', { username, password });
+            const response = await apiClient.post('/auth/login', { username, password, rememberMe });
             const { token, permissions, passwordChangeRequired } = response.data;
             login(token, permissions, passwordChangeRequired);
             toast.success('Login successful!');
@@ -66,9 +67,19 @@ const LoginPage: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Password" 
                         />
-                        <span className="forgot-password">
-                            <a href="#">Forgot Password?</a>
-                        </span>
+                        <div className="remember-forgot-container">
+                            <label className="remember-me">
+                                <input 
+                                    type="checkbox" 
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                />
+                                <span>Remember me for 30 days</span>
+                            </label>
+                            <span className="forgot-password">
+                                <a href="/forgot-password">Forgot Password?</a>
+                            </span>
+                        </div>
                         <div className="button-wrapper">
                             <HoverButton 
                                 textOne="Sign In"
@@ -248,15 +259,51 @@ const StyledWrapper = styled.div`
         box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
     }
 
-    .form .forgot-password {
-        display: block;
+    .form .remember-forgot-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-top: 15px;
-        margin-left: 10px;
-        text-align: left;
+        margin-bottom: 10px;
 
         @media (max-width: 480px) {
-            margin-top: 12px;
-            margin-left: 5px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+    }
+
+    .form .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--light-blue);
+        }
+
+        span {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        &:hover span {
+            color: var(--text-primary);
+        }
+    }
+
+    .form .forgot-password {
+        display: block;
+        text-align: right;
+
+        @media (max-width: 480px) {
+            text-align: left;
         }
     }
 

@@ -4,6 +4,7 @@ export interface DocumentVersion {
     uploaderUsername: string;
     uploadTimestamp: string;
     sizeInBytes: number;
+    description?: string;
 }
 
 export interface Document {

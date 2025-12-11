@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { getMyProfile } from '../../api/profileService';
+import type { UserProfile } from '../../types/user';
 import ThemeToggleButton from '../common/ThemeToggleButton';
 import SearchBar from '../common/SearchBar';
 import NotificationDropdown from '../common/NotificationDropdown';
@@ -11,12 +13,26 @@ import styled from 'styled-components';
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const getUserInitials = (username?: string) => {
         if (!username) return 'AD';
         return username.substring(0, 2).toUpperCase();
     };
+
+    // Fetch user profile
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const profile = await getMyProfile();
+                setUserProfile(profile);
+            } catch (error) {
+                console.error('Failed to fetch user profile:', error);
+            }
+        };
+        fetchUserProfile();
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -62,9 +78,10 @@ const Header: React.FC = () => {
                     className={profileDropdownOpen ? 'active' : ''}
                 >
                     <ProfileTrigger onClick={toggleDropdown}>
-                        <UserAvatar>
-                            {getUserInitials(user?.sub)}
-                        </UserAvatar>
+                        <UserAvatar
+                            src={userProfile?.profilePictureUrl || `https://ui-avatars.com/api/?name=${user?.sub}&background=2E97C5&color=fff`}
+                            alt="Profile"
+                        />
                         <UserInfo>
                             <UserName>{user?.sub || 'Admin User'}</UserName>
                             <UserRole>System Administrator</UserRole>
@@ -181,22 +198,18 @@ const ProfileTrigger = styled.div`
     }
 `;
 
-const UserAvatar = styled.div`
+const UserAvatar = styled.img`
     width: 50px;
     height: 50px;
     border-radius: 50%;
+    border: 3px solid rgba(46, 151, 197, 0.2);
+    box-shadow: 0 4px 12px rgba(46, 151, 197, 0.15);
+    object-fit: cover;
     background: linear-gradient(135deg, var(--light-blue), var(--purple));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 18px;
 
     @media (max-width: 768px) {
         width: 40px;
         height: 40px;
-        font-size: 16px;
     }
 `;
 

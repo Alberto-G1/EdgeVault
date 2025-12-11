@@ -42,4 +42,7 @@ public class DocumentVersion {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // Use optional = false
     @JoinColumn(name = "uploader_id")
     private User uploader;
+
+    @Column(length = 1000)
+    private String description;
 }
