@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import { changeMyPassword } from '../../api/profileService';
 import { Lock } from 'lucide-react';
 
 const ForcePasswordChangeModal: React.FC = () => {
     const { fulfillPasswordChange } = useAuth();
+    const { showSuccess, showError } = useToast();
     const [passwordData, setPasswordData] = useState({
         currentPassword: 'Default@123U', // Pre-fill with the default
         newPassword: '',

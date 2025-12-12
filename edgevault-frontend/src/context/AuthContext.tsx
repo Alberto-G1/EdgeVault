@@ -22,7 +22,21 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
-    const [user, setUser] = useState<AuthToken | null>(null);
+    const [user, setUser] = useState<AuthToken | null>(() => {
+        // Initialize user from token immediately to prevent false negative on isAuthenticated
+        const savedToken = localStorage.getItem('authToken');
+        if (savedToken) {
+            try {
+                const decoded = jwtDecode<AuthToken>(savedToken);
+                if (decoded.exp * 1000 > Date.now()) {
+                    return decoded;
+                }
+            } catch (error) {
+                console.error("Error decoding token on init:", error);
+            }
+        }
+        return null;
+    });
     const [permissions, setPermissions] = useState<Set<string>>(() => {
         const savedPerms = localStorage.getItem('userPermissions');
         return savedPerms ? new Set(JSON.parse(savedPerms)) : new Set();
@@ -47,9 +61,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (token) {
             try {
                 const decodedToken = jwtDecode<AuthToken>(token);
-                if (decodedToken.exp * 1000 > Date.now()) {
+                const expirationTime = decodedToken.exp * 1000;
+                const currentTime = Date.now();
+                const timeUntilExpiry = expirationTime - currentTime;
+                
+                // Debug logging
+                console.log('Token validation:', {
+                    expiresAt: new Date(expirationTime).toLocaleString(),
+                    timeUntilExpiry: `${Math.floor(timeUntilExpiry / 1000 / 60)} minutes`,
+                    isValid: timeUntilExpiry > 0
+                });
+                
+                if (timeUntilExpiry > 0) {
                     setUser(decodedToken);
                 } else {
+                    console.warn('Token expired, logging out');
                     logout();
                 }
             } catch (error) {
@@ -62,14 +88,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [token, logout]);
 
-    const login = (newToken: string, newPermissions: string[], newPasswordChangeRequired: boolean) => {
+    const login = useCallback((newToken: string, newPermissions: string[], newPasswordChangeRequired: boolean) => {
+        console.log('Login called with:', { 
+            hasToken: !!newToken, 
+            permissionsCount: newPermissions.length,
+            passwordChangeRequired: newPasswordChangeRequired 
+        });
+        
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('userPermissions', JSON.stringify(newPermissions));
-        localStorage.setItem('passwordChangeRequired', JSON.stringify(newPermissions));
+        localStorage.setItem('passwordChangeRequired', JSON.stringify(newPasswordChangeRequired));
         setToken(newToken);
         setPermissions(new Set(newPermissions));
         setPasswordChangeRequired(newPasswordChangeRequired);
-    };
+    }, []);
     
     // New function to update state after a successful password change
     const fulfillPasswordChange = useCallback(() => {
@@ -86,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         fulfillPasswordChange,
-    }), [token, user, permissions, passwordChangeRequired, fulfillPasswordChange]);
+    }), [token, user, permissions, passwordChangeRequired, login, logout, fulfillPasswordChange]);
 
     return (
         <AuthContext.Provider value={contextValue}>

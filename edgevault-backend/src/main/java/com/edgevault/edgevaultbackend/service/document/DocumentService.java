@@ -128,6 +128,11 @@ public class DocumentService {
 
         // Save the parent document. Cascade will save the new version.
         Document updatedDocument = documentRepository.save(document);
+        
+        // Flush to ensure the newVersion gets its ID from the database
+        documentRepository.flush();
+        
+        // Now index the document with the ID available
         searchService.indexDocument(newVersion, file);
 
         // --- AUDIT LOG ---
