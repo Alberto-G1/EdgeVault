@@ -49,4 +49,20 @@ public class SearchController {
                     ));
         }
     }
+
+    @GetMapping("/admin/clear-index")
+    public ResponseEntity<?> clearIndex() {
+        try {
+            log.info("Received request to clear Elasticsearch index");
+            searchService.clearIndex();
+            return ResponseEntity.ok(Map.of(
+                "message", "Elasticsearch index cleared successfully",
+                "note", "Documents will be re-indexed automatically when they are next updated or uploaded"
+            ));
+        } catch (Exception e) {
+            log.error("Error clearing Elasticsearch index", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to clear index: " + e.getMessage()));
+        }
+    }
 }

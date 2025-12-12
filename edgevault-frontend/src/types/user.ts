@@ -18,6 +18,12 @@ export interface User {
     roles?: string[]; 
     departmentName?: string;
     profilePictureUrl?: string;
+    profilePicture?: string;
+    profile?: {
+        profilePictureUrl?: string;
+        profilePicture?: string;
+        [key: string]: unknown;
+    };
 }
 
 // This will now represent the full profile DTO from the backend

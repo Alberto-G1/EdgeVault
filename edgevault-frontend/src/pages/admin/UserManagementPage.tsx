@@ -3,7 +3,6 @@ import { getAllUserDetails, createUser, updateUser, deleteUser } from '../../api
 import type { User } from '../../types/user';
 import { useToast } from '../../context/ToastContext';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
-import Modal from '../../components/common/Modal';
 import UserForm from '../../components/admin/UserForm';
 import { usePermissions } from '../../hooks/usePermissions';
 import styled from 'styled-components';
@@ -11,6 +10,28 @@ import FullPageLoader from '../../components/common/FullPageLoader';
 import HoverButton from '../../components/common/HoverButton';
 import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import UserDetailsModal from '../../components/common/UserDetailsModal';
+
+const resolveUserProfileImage = (userRecord: User) => {
+    const candidates = [
+        userRecord.profilePictureUrl,
+        userRecord.profilePicture,
+        userRecord.profile?.profilePictureUrl,
+        userRecord.profile?.profilePicture,
+    ];
+
+    const validUrl = candidates.find((candidate): candidate is string => {
+        if (!candidate) return false;
+        const trimmed = candidate.trim();
+        return trimmed.length > 0;
+    });
+
+    if (validUrl) {
+        return validUrl;
+    }
+
+    const encodedName = encodeURIComponent(userRecord.username ?? 'User');
+    return `https://ui-avatars.com/api/?name=${encodedName}&background=2E97C5&color=fff`;
+};
 
 const UserManagementPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
@@ -163,8 +184,13 @@ const UserManagementPage: React.FC = () => {
                             <TableRow key={user.id} style={{ animationDelay: `${0.2 + index * 0.05}s` }}>
                                 <TableCell>
                                     <ProfileAvatar
-                                        src={user.profilePictureUrl || `https://ui-avatars.com/api/?name=${user.username}&background=2E97C5&color=fff`}
+                                        src={resolveUserProfileImage(user)}
                                         alt={user.username}
+                                        onError={(event) => {
+                                            const target = event.currentTarget;
+                                            target.onerror = null;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=2E97C5&color=fff`;
+                                        }}
                                     />
                                 </TableCell>
                                 <TableCell className="font-medium">{user.username}</TableCell>
@@ -276,14 +302,14 @@ const UserManagementPage: React.FC = () => {
                 </PaginationControls>
             </PaginationContainer>
 
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={userToEdit ? 'Edit User' : 'Create New User'}>
+            {isModalOpen && (
                 <UserForm 
                     userToEdit={userToEdit} 
                     onSave={handleSaveUser} 
                     onCancel={handleCloseModal} 
                     isLoading={isSubmitting} 
                 />
-            </Modal>
+            )}
 
             <DeleteConfirmModal
                 isOpen={deleteModalOpen}

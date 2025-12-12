@@ -22,5 +22,27 @@ apiClient.interceptors.request.use(
     }
 );
 
+// Response interceptor to handle authentication errors
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // If we get a 401 or 403, clear the auth data
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // Only clear if it's not a login request
+            if (!error.config.url?.includes('/auth/login')) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userPermissions');
+                localStorage.removeItem('passwordChangeRequired');
+                
+                // Redirect to welcome page if not already there
+                if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/auth')) {
+                    window.location.href = '/';
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default apiClient;
 

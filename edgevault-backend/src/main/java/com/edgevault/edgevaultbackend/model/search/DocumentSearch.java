@@ -39,7 +39,7 @@ public class DocumentSearch {
     @Field(type = FieldType.Keyword, name = "uploader")
     private String uploaderUsername;
 
-    @Field(type = FieldType.Date, name = "uploadTimestamp", format = DateFormat.date_optional_time)
+    @Field(type = FieldType.Date, name = "uploadTimestamp", format = {DateFormat.date_optional_time, DateFormat.date, DateFormat.date_time})
     private LocalDateTime uploadTimestamp;
 
     @Field(type = FieldType.Integer, name = "versionNumber")

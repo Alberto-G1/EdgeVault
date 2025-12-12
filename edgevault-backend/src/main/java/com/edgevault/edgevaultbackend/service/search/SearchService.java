@@ -129,4 +129,18 @@ public class SearchService {
         return userRepository.findByUsernameWithDetails(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
+
+    /**
+     * Clears the entire Elasticsearch index.
+     * This can be used to fix any data format issues in the existing index.
+     */
+    public void clearIndex() {
+        try {
+            documentSearchRepository.deleteAll();
+            log.info("Successfully cleared Elasticsearch index");
+        } catch (Exception e) {
+            log.error("Failed to clear Elasticsearch index", e);
+            throw new RuntimeException("Failed to clear index: " + e.getMessage(), e);
+        }
+    }
 }
