@@ -208,8 +208,8 @@ const DocumentDetailPage: React.FC = () => {
                     {hasPermission('DOCUMENT_UPDATE') && (
                         <UploadButton 
                             onClick={() => setIsUploadModalOpen(true)}
-                            textOne="Upload New Version"
-                            textTwo="New Version"
+                            textOne="Upload New Document"
+                            textTwo="Version"
                             width="220px"
                             height="55px"
                         />
@@ -217,7 +217,7 @@ const DocumentDetailPage: React.FC = () => {
                     <DownloadButton 
                         onClick={() => handleDownload(document.latestVersion.id)}
                         textOne="Download Latest"
-                        textTwo="Download Now"
+                        textTwo="Document Now"
                         width="180px"
                         height="55px"
                     />
@@ -225,7 +225,7 @@ const DocumentDetailPage: React.FC = () => {
                         <DeleteDocButton 
                             onClick={() => setIsDeleteDocConfirmOpen(true)}
                             textOne="Request Deletion"
-                            textTwo="Delete Document"
+                            textTwo="To Delete Document"
                             width="190px"
                             height="55px"
                         />

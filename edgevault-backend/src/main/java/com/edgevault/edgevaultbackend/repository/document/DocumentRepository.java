@@ -31,4 +31,14 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findByDepartmentId(Long departmentId);
 
     long countByStatus(DocumentStatus status);
+    
+    // Simple database search - searches in title and filename only (description is CLOB, can't use LOWER)
+    @Query("SELECT DISTINCT d FROM Document d " +
+            "LEFT JOIN FETCH d.department " +
+            "LEFT JOIN FETCH d.latestVersion lv " +
+            "LEFT JOIN FETCH lv.uploader " +
+            "WHERE d.department.id = :departmentId " +
+            "AND (LOWER(d.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(d.originalFileName) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<Document> searchDocuments(Long departmentId, String query);
 }

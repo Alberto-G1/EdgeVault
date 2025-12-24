@@ -1,6 +1,6 @@
 package com.edgevault.edgevaultbackend.controller.search;
 
-import com.edgevault.edgevaultbackend.model.search.DocumentSearch;
+import com.edgevault.edgevaultbackend.dto.document.DocumentResponseDto;
 import com.edgevault.edgevaultbackend.service.search.SearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class SearchController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Search query cannot be empty"));
             }
             
-            List<DocumentSearch> results = searchService.searchDocuments(query);
+            List<DocumentResponseDto> results = searchService.searchDocuments(query);
             log.info("Search completed successfully, returning {} results", results.size());
             return ResponseEntity.ok(results);
             
@@ -47,22 +47,6 @@ public class SearchController {
                         "message", e.getMessage(),
                         "type", e.getClass().getSimpleName()
                     ));
-        }
-    }
-
-    @GetMapping("/admin/clear-index")
-    public ResponseEntity<?> clearIndex() {
-        try {
-            log.info("Received request to clear Elasticsearch index");
-            searchService.clearIndex();
-            return ResponseEntity.ok(Map.of(
-                "message", "Elasticsearch index cleared successfully",
-                "note", "Documents will be re-indexed automatically when they are next updated or uploaded"
-            ));
-        } catch (Exception e) {
-            log.error("Error clearing Elasticsearch index", e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to clear index: " + e.getMessage()));
         }
     }
 }
