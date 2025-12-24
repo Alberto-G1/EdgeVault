@@ -149,14 +149,14 @@ const AboutPage: React.FC = () => {
                 <CompanyCard>
                     <CompanyInfo>
                         <InfoLabel>Developer</InfoLabel>
-                        <InfoValue>Grande Technology Solutions</InfoValue>
+                        <InfoValue>Grand Grande Technology (GGT) Solutions</InfoValue>
                     </CompanyInfo>
                     <CompanyInfo>
                         <InfoLabel>Contact Email</InfoLabel>
                         <InfoValue>
-                            <ContactLink href="mailto:support@edgevault.com">
+                            <ContactLink href="mailto:nuwarindaalbertgrande@gmail.com">
                                 <Mail size={16} />
-                                support@edgevault.com
+                                nuwarindaalbertgrande@gmail.com
                             </ContactLink>
                         </InfoValue>
                     </CompanyInfo>
@@ -173,11 +173,11 @@ const AboutPage: React.FC = () => {
                 <SocialLinks>
                     <SocialTitle>Connect With Us</SocialTitle>
                     <SocialButtons>
-                        <SocialButton href="https://github.com" target="_blank" rel="noopener noreferrer">
+                        <SocialButton href="https://nuwarindaalbertgrandeportfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
                             <Github size={20} />
-                            GitHub
+                            Our Website
                         </SocialButton>
-                        <SocialButton href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                        <SocialButton href="https://www.linkedin.com/in/albert-nuwarinda-129841351/" target="_blank" rel="noopener noreferrer">
                             <Linkedin size={20} />
                             LinkedIn
                         </SocialButton>

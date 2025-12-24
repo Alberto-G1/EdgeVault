@@ -66,7 +66,7 @@ const SearchPage: React.FC = () => {
                     {results.map((result, index) => (
                         <ResultCard 
                             key={result.id}
-                            onClick={() => navigate(`/admin/documents/${result.documentId}`)}
+                            onClick={() => navigate(`/admin/documents/${result.id}`)}
                             style={{ animationDelay: `${index * 0.05}s` }}
                         >
                             <CardHeader>
@@ -82,19 +82,29 @@ const SearchPage: React.FC = () => {
                             <CardBody>
                                 <InfoRow>
                                     <InfoIcon><FileType size={16} /></InfoIcon>
-                                    <InfoText>{result.originalFileName}</InfoText>
+                                    <InfoText>{result.fileName}</InfoText>
                                 </InfoRow>
-                                <InfoRow>
-                                    <InfoIcon><User size={16} /></InfoIcon>
-                                    <InfoText>Uploaded by {result.uploaderUsername}</InfoText>
-                                </InfoRow>
-                                <InfoRow>
-                                    <InfoIcon><Calendar size={16} /></InfoIcon>
-                                    <InfoText>{format(new Date(result.uploadTimestamp), 'MMM d, yyyy')}</InfoText>
-                                </InfoRow>
+                                {result.latestVersion && (
+                                    <>
+                                        <InfoRow>
+                                            <InfoIcon><User size={16} /></InfoIcon>
+                                            <InfoText>Uploaded by {result.latestVersion.uploaderUsername || 'Unknown'}</InfoText>
+                                        </InfoRow>
+                                        <InfoRow>
+                                            <InfoIcon><Calendar size={16} /></InfoIcon>
+                                            <InfoText>
+                                                {result.latestVersion.uploadTimestamp 
+                                                    ? format(new Date(result.latestVersion.uploadTimestamp), 'MMM d, yyyy')
+                                                    : 'Date unknown'}
+                                            </InfoText>
+                                        </InfoRow>
+                                    </>
+                                )}
                             </CardBody>
                             
-                            <VersionBadge>Version {result.versionNumber}</VersionBadge>
+                            {result.latestVersion && (
+                                <VersionBadge>Version {result.latestVersion.versionNumber}</VersionBadge>
+                            )}
                         </ResultCard>
                     ))}
                 </ResultsGrid>
