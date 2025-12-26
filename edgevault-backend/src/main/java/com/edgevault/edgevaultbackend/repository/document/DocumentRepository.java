@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.repository.document;
 import com.edgevault.edgevaultbackend.dto.document.DocumentApprovalDto; // <-- IMPORT
 import com.edgevault.edgevaultbackend.model.document.Document;
 import com.edgevault.edgevaultbackend.model.document.DocumentStatus;
+import com.edgevault.edgevaultbackend.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -31,6 +32,9 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findByDepartmentId(Long departmentId);
 
     long countByStatus(DocumentStatus status);
+    
+    // Count documents by uploader
+    long countByLatestVersion_Uploader(User uploader);
     
     // Simple database search - searches in title and filename only (description is CLOB, can't use LOWER)
     @Query("SELECT DISTINCT d FROM Document d " +

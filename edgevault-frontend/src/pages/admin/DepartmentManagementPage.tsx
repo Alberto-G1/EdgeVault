@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getAllDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departmentService';
 import type { Department } from '../../types/user';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { Edit, Trash2, Building, Users, Search, Filter, Briefcase } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
@@ -10,6 +11,7 @@ import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const DepartmentManagementPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
+    const { hasPermission } = usePermissions();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -146,13 +148,15 @@ const DepartmentManagementPage: React.FC = () => {
                     <PageSubtitle>Manage organizational departments and teams</PageSubtitle>
                 </HeaderContent>
                 
-                <AddDeptButton 
-                    onClick={() => handleOpenModal()}
-                    textOne="Add Department"
-                    textTwo="Create Dept"
-                    width="200px"
-                    height="55px"
-                />
+                {hasPermission('DEPARTMENT_CREATE') && (
+                    <AddDeptButton 
+                        onClick={() => handleOpenModal()}
+                        textOne="Add Department"
+                        textTwo="Create Dept"
+                        width="200px"
+                        height="55px"
+                    />
+                )}
             </PageHeader>
 
             <ControlsContainer>
@@ -229,19 +233,25 @@ const DepartmentManagementPage: React.FC = () => {
                                 </MetaItem>
                             </DeptMeta>
                             
-                            <DeptActions>
-                                <EditButton 
-                                    onClick={() => handleOpenModal(dept)}
-                                    style={{ color: colors.text, borderColor: colors.border }}
-                                >
-                                    <Edit size={18} />
-                                    Edit
-                                </EditButton>
-                                <DeleteButton onClick={() => handleDelete(dept.id)}>
-                                    <Trash2 size={18} />
-                                    Delete
-                                </DeleteButton>
-                            </DeptActions>
+                            {(hasPermission('DEPARTMENT_UPDATE') || hasPermission('DEPARTMENT_DELETE')) && (
+                                <DeptActions>
+                                    {hasPermission('DEPARTMENT_UPDATE') && (
+                                        <EditButton 
+                                            onClick={() => handleOpenModal(dept)}
+                                            style={{ color: colors.text, borderColor: colors.border }}
+                                        >
+                                            <Edit size={18} />
+                                            Edit
+                                        </EditButton>
+                                    )}
+                                    {hasPermission('DEPARTMENT_DELETE') && (
+                                        <DeleteButton onClick={() => handleDelete(dept.id)}>
+                                            <Trash2 size={18} />
+                                            Delete
+                                        </DeleteButton>
+                                    )}
+                                </DeptActions>
+                            )}
                         </DepartmentCard>
                     );
                 })}
