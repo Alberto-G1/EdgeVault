@@ -19,4 +19,10 @@ public class UpdateUserRequestDto {
 
     @jakarta.validation.constraints.NotNull(message = "Department ID is required")
     private Long departmentId;
+    
+    // Work Information fields
+    private String employeeId;
+    private String jobTitle;
+    private String supervisorName;
+    private String dateJoined; // String format "yyyy-MM-dd"
 }

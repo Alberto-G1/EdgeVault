@@ -105,12 +105,6 @@
             <artifactId>s3</artifactId>
         </dependency>
 
-        <!-- Spring Data Elasticsearch Starter -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
-        </dependency>
-
         <!-- Apache Tika for content extraction (OCR, text from PDF/DOCX) -->
         <dependency>
             <groupId>org.apache.tika</groupId>

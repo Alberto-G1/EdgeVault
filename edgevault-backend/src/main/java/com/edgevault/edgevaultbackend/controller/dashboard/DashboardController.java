@@ -15,7 +15,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('USER_READ') or hasAuthority('DOCUMENT_READ') or hasAuthority('AUDIT_READ')") // Must have at least one admin-level read permission
 public class DashboardController {
 
     private final DashboardService dashboardService;

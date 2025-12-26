@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllRoles, deleteRole } from '../../api/roleService';
 import type { Role } from '../../types/user';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { Edit, Trash2, ShieldCheck, Users, Key, Crown } from 'lucide-react';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
@@ -11,6 +12,7 @@ import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const RoleManagementPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
+    const { hasPermission } = usePermissions();
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'system' | 'custom'>('all');
@@ -120,13 +122,15 @@ const RoleManagementPage: React.FC = () => {
                     <PageSubtitle>Manage user roles and permissions</PageSubtitle>
                 </HeaderContent>
                 
-                <AddRoleButton 
-                    onClick={() => navigate('/admin/roles/new')}
-                    textOne="Add New Role"
-                    textTwo="Create Role"
-                    width="200px"
-                    height="55px"
-                />
+                {hasPermission('ROLE_CREATE') && (
+                    <AddRoleButton 
+                        onClick={() => navigate('/admin/roles/new')}
+                        textOne="Add New Role"
+                        textTwo="Create Role"
+                        width="200px"
+                        height="55px"
+                    />
+                )}
             </PageHeader>
 
             <FilterTabs>
@@ -183,21 +187,25 @@ const RoleManagementPage: React.FC = () => {
                                 )}
                             </PermissionPreview>
                             
-                            <RoleActions>
-                                <ActionButton 
-                                    onClick={() => navigate(`/admin/roles/edit/${role.id}`)}
-                                    style={{ color: colors.text, borderColor: colors.border }}
-                                >
-                                    <Edit size={18} />
-                                    Edit
-                                </ActionButton>
-                                {!isSystemRole && (
-                                    <DeleteButton onClick={() => handleDeleteRole(role.id)}>
-                                        <Trash2 size={18} />
-                                        Delete
-                                    </DeleteButton>
-                                )}
-                            </RoleActions>
+                            {(hasPermission('ROLE_UPDATE') || hasPermission('ROLE_DELETE')) && (
+                                <RoleActions>
+                                    {hasPermission('ROLE_UPDATE') && (
+                                        <ActionButton 
+                                            onClick={() => navigate(`/admin/roles/edit/${role.id}`)}
+                                            style={{ color: colors.text, borderColor: colors.border }}
+                                        >
+                                            <Edit size={18} />
+                                            Edit
+                                        </ActionButton>
+                                    )}
+                                    {hasPermission('ROLE_DELETE') && !isSystemRole && (
+                                        <DeleteButton onClick={() => handleDeleteRole(role.id)}>
+                                            <Trash2 size={18} />
+                                            Delete
+                                        </DeleteButton>
+                                    )}
+                                </RoleActions>
+                            )}
                         </RoleCard>
                     );
                 })}

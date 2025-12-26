@@ -36,7 +36,12 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
         email: '',
         role: 'Department User', // Single role selection
         enabled: true,
-        departmentId: '', 
+        departmentId: '',
+        // Work Information fields
+        employeeId: '',
+        jobTitle: '',
+        supervisorName: '',
+        dateJoined: '',
     });
 
     useEffect(() => {
@@ -69,6 +74,11 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                 role: userRole,
                 enabled: userToEdit.enabled,
                 departmentId: userDept ? String(userDept.id) : '',
+                // Work Information fields
+                employeeId: userToEdit.employeeId || '',
+                jobTitle: userToEdit.jobTitle || '',
+                supervisorName: userToEdit.supervisorName || '',
+                dateJoined: userToEdit.dateJoined || '',
             });
         }
     }, [userToEdit, isEditMode, departments]);
@@ -84,11 +94,19 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ 
+        const dataToSave: any = { 
             ...formData, 
             roles: [formData.role], // Convert single role to array
-            departmentId: Number(formData.departmentId) 
-        });
+            departmentId: Number(formData.departmentId)
+        };
+        
+        // Auto-set dateJoined to today's date for new users if not set
+        if (!isEditMode && !dataToSave.dateJoined) {
+            const today = new Date().toISOString().split('T')[0];
+            dataToSave.dateJoined = today;
+        }
+        
+        onSave(dataToSave);
     };
 
     const handleRoleSelect = (roleName: string) => {
@@ -249,6 +267,82 @@ const UserForm: React.FC<UserFormProps> = ({ userToEdit, onSave, onCancel, isLoa
                         </StatusToggle>
                     </StatusCard>
                 )}
+
+                <WorkInfoCard>
+                    <WorkInfoHeader>
+                        <IconWrapper style={{ background: 'rgba(150, 129, 158, 0.1)', color: 'rgb(150, 129, 158)' }}>
+                            <Building size={20} />
+                        </IconWrapper>
+                        <WorkInfoTitle>Work Information</WorkInfoTitle>
+                        <WorkInfoBadge>Admin Editable</WorkInfoBadge>
+                    </WorkInfoHeader>
+                    <WorkInfoGrid>
+                        <FormGroup>
+                            <Label>
+                                <IconWrapper style={{ background: 'rgba(46, 151, 197, 0.1)', color: '#2E97C5' }}>
+                                    <Building size={16} />
+                                </IconWrapper>
+                                Employee ID
+                            </Label>
+                            <Input
+                                type="text"
+                                name="employeeId"
+                                value={formData.employeeId}
+                                onChange={handleChange}
+                                placeholder="Enter employee id"
+                                style={{ borderLeft: '4px solid #2E97C5' }}
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <Label>
+                                <IconWrapper style={{ background: 'rgba(46, 151, 197, 0.1)', color: '#2E97C5' }}>
+                                    <Building size={16} />
+                                </IconWrapper>
+                                Job Title
+                            </Label>
+                            <Input
+                                type="text"
+                                name="jobTitle"
+                                value={formData.jobTitle}
+                                onChange={handleChange}
+                                placeholder="Enter job title"
+                                style={{ borderLeft: '4px solid #2E97C5' }}
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <Label>
+                                <IconWrapper style={{ background: 'rgba(46, 151, 197, 0.1)', color: '#2E97C5' }}>
+                                    <UserIcon size={16} />
+                                </IconWrapper>
+                                Supervisor Name
+                            </Label>
+                            <Input
+                                type="text"
+                                name="supervisorName"
+                                value={formData.supervisorName}
+                                onChange={handleChange}
+                                placeholder="Enter supervisor name"
+                                style={{ borderLeft: '4px solid #2E97C5' }}
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <Label>
+                                <IconWrapper style={{ background: 'rgba(46, 151, 197, 0.1)', color: '#2E97C5' }}>
+                                    <Building size={16} />
+                                </IconWrapper>
+                                Date Joined
+                            </Label>
+                            <Input
+                                type="date"
+                                name="dateJoined"
+                                value={formData.dateJoined}
+                                onChange={handleChange}
+                                style={{ borderLeft: '4px solid #2E97C5' }}
+                            />
+                            {!isEditMode && <HelpText>Auto-filled with today's date if left empty</HelpText>}
+                        </FormGroup>
+                    </WorkInfoGrid>
+                </WorkInfoCard>
 
                 <ButtonGroup>
                     <CancelButton type="button" onClick={onCancel}>
@@ -1110,6 +1204,76 @@ const StatusOption = styled.div<{ $active: boolean }>`
 
     &:hover svg {
         transform: rotate(360deg) scale(1.1);
+    }
+`;
+
+const WorkInfoCard = styled.div`
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(150, 129, 158, 0.08), rgba(120, 99, 128, 0.05));
+    border-radius: 20px;
+    border: 3px solid rgba(150, 129, 158, 0.3);
+    margin-bottom: 2.5rem;
+    box-shadow: 0 8px 24px rgba(150, 129, 158, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease-out 0.4s both;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(150, 129, 158, 0.05), rgba(120, 99, 128, 0.03));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(150, 129, 158, 0.25);
+
+        &::before {
+            opacity: 1;
+        }
+    }
+`;
+
+const WorkInfoHeader = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+`;
+
+const WorkInfoTitle = styled.h3`
+    font-size: 1.375rem;
+    font-weight: 800;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+`;
+
+const WorkInfoBadge = styled.span`
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(150, 129, 158);
+    background: rgba(150, 129, 158, 0.15);
+    padding: 0.4rem 0.75rem;
+    border-radius: 20px;
+    border: 1px solid rgba(150, 129, 158, 0.3);
+`;
+
+const WorkInfoGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
     }
 `;
 

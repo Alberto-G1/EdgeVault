@@ -18,4 +18,9 @@ public class UserResponseDto {
     private boolean enabled;
     private Set<String> roles;
     private String departmentName;
+    // Work Information fields
+    private String employeeId;
+    private String jobTitle;
+    private String dateJoined;
+    private String supervisorName;
 }

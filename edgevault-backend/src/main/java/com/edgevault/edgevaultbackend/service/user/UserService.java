@@ -67,6 +67,24 @@ public class UserService {
                         .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName)))
                 .collect(Collectors.toSet());
         user.setRoles(roles);
+        
+        // Save work information
+        user.setEmployeeId(request.getEmployeeId());
+        user.setJobTitle(request.getJobTitle());
+        user.setSupervisorName(request.getSupervisorName());
+        
+        // Parse and set dateJoined
+        if (request.getDateJoined() != null && !request.getDateJoined().isEmpty()) {
+            try {
+                user.setDateJoined(java.time.LocalDate.parse(request.getDateJoined()));
+            } catch (Exception e) {
+                // If parsing fails, set to today
+                user.setDateJoined(java.time.LocalDate.now());
+            }
+        } else {
+            // Default to today if not provided
+            user.setDateJoined(java.time.LocalDate.now());
+        }
 
         User savedUser = userRepository.save(user);
 
@@ -102,6 +120,27 @@ public class UserService {
                         .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName)))
                 .collect(Collectors.toSet());
         user.setRoles(roles);
+        
+        // Update account status based on enabled field
+        if (request.isEnabled()) {
+            user.setAccountStatus(com.edgevault.edgevaultbackend.model.user.AccountStatus.ACTIVE);
+        } else {
+            user.setAccountStatus(com.edgevault.edgevaultbackend.model.user.AccountStatus.SUSPENDED);
+        }
+        
+        // Update work information
+        user.setEmployeeId(request.getEmployeeId());
+        user.setJobTitle(request.getJobTitle());
+        user.setSupervisorName(request.getSupervisorName());
+        
+        // Parse and set dateJoined if provided
+        if (request.getDateJoined() != null && !request.getDateJoined().isEmpty()) {
+            try {
+                user.setDateJoined(java.time.LocalDate.parse(request.getDateJoined()));
+            } catch (Exception e) {
+                // Keep existing dateJoined if parsing fails
+            }
+        }
 
         User updatedUser = userRepository.save(user);
 
@@ -149,6 +188,10 @@ public class UserService {
                         .map(Role::getName)
                         .collect(Collectors.toSet()))
                 .departmentName(user.getDepartment() != null ? user.getDepartment().getName() : "N/A")
+                .employeeId(user.getEmployeeId())
+                .jobTitle(user.getJobTitle())
+                .dateJoined(user.getDateJoined() != null ? user.getDateJoined().toString() : null)
+                .supervisorName(user.getSupervisorName())
                 .build();
     }
 

@@ -24,6 +24,11 @@ export interface User {
         profilePicture?: string;
         [key: string]: unknown;
     };
+    // Work Information fields
+    employeeId?: string;
+    jobTitle?: string;
+    dateJoined?: string;
+    supervisorName?: string;
 }
 
 // This will now represent the full profile DTO from the backend

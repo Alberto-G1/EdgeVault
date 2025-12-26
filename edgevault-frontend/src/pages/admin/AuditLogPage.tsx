@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getAuditLogs } from '../../api/auditService';
 import type { AuditLog } from '../../types/audit';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { ShieldCheck, ShieldAlert, Search, Filter, Calendar, User, Activity, Lock, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import styled from 'styled-components';
@@ -9,6 +10,7 @@ import Loader from '../../components/common/Loader';
 
 const AuditLogPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
+    const { hasPermission } = usePermissions();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [verificationStatus, setVerificationStatus] = useState<'VERIFYING' | 'VALID' | 'INVALID'>('VERIFYING');
@@ -200,10 +202,12 @@ const AuditLogPage: React.FC = () => {
                         )}
                     </VerificationBadge>
                     
-                    <ExportButton onClick={exportToCSV}>
-                        <Download size={18} />
-                        Export CSV
-                    </ExportButton>
+                    {hasPermission('AUDIT_EXPORT') && (
+                        <ExportButton onClick={exportToCSV}>
+                            <Download size={18} />
+                            Export CSV
+                        </ExportButton>
+                    )}
                 </HeaderActions>
             </PageHeader>
 

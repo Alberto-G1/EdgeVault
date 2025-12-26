@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { getDashboardStats, getRecentActivity } from '../../api/dashboardService';
 import type { StatCard, RecentActivity } from '../../types/dashboard';
 import { useToast } from '../../context/ToastContext';
-import { Users, FileText, LogIn, ClipboardCheck, History } from 'lucide-react';
+import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
+import { Users, FileText, LogIn, ClipboardCheck, History, FolderOpen, Activity } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import styled from 'styled-components';
 import FullPageLoader from '../../components/common/FullPageLoader';
@@ -13,13 +15,20 @@ const iconMap = {
     "Total Documents": <FileText className="h-8 w-8" style={{ color: 'var(--success)' }} />,
     "Total Logins Today": <LogIn className="h-8 w-8" style={{ color: 'var(--purple)' }} />,
     "Pending Approvals": <ClipboardCheck className="h-8 w-8" style={{ color: 'var(--warning)' }} />,
+    "My Documents": <FolderOpen className="h-8 w-8" style={{ color: 'var(--light-blue)' }} />,
+    "My Activity": <Activity className="h-8 w-8" style={{ color: 'var(--success)' }} />,
 };
 
 const DashboardPage: React.FC = () => {
     const { showError } = useToast();
+    const { hasAnyPermission } = usePermissions();
+    const { user } = useAuth();
     const [stats, setStats] = useState<StatCard[]>([]);
     const [activities, setActivities] = useState<RecentActivity[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    // Check if user has admin permissions
+    const isAdmin = hasAnyPermission(['USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'ROLE_CREATE']);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -29,7 +38,18 @@ const DashboardPage: React.FC = () => {
                     getDashboardStats(),
                     getRecentActivity()
                 ]);
-                setStats(statsData);
+                
+                // Filter stats based on user role
+                let filteredStats = statsData;
+                if (!isAdmin) {
+                    // Regular users only see their own stats
+                    filteredStats = statsData.filter(stat => 
+                        stat.title === 'My Documents' || 
+                        stat.title === 'My Activity'
+                    );
+                }
+                
+                setStats(filteredStats);
                 setActivities(activityData);
             } catch (error) {
                 showError('Error', 'Failed to load dashboard data.');
@@ -38,7 +58,7 @@ const DashboardPage: React.FC = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [isAdmin]);
 
     if (loading) return <FullPageLoader />;
 
@@ -47,7 +67,7 @@ const DashboardPage: React.FC = () => {
             <WelcomeCard />
             
             <DashboardHeader>
-                <h1 className="title">Admin Dashboard</h1>
+                <h1 className="title">{isAdmin ? 'Admin Dashboard' : 'My Dashboard'}</h1>
             </DashboardHeader>
 
             {/* Stat Cards */}
@@ -65,26 +85,28 @@ const DashboardPage: React.FC = () => {
                 ))}
             </StatsGrid>
 
-            {/* Recent Activity */}
-            <ActivitySection>
-                <h2 className="activity-title">Recent Activity</h2>
-                <ActivityList>
-                    {activities.map((activity, index) => (
-                        <ActivityItem key={index} style={{ animationDelay: `${0.5 + index * 0.05}s` }}>
-                            <p className="activity-main">
-                                <span className="username">{activity.username}</span>{' '}
-                                {activity.action.toLowerCase().replace(/_/g, ' ')}
-                            </p>
-                            <p className="activity-details" title={activity.details}>
-                                {activity.details}
-                            </p>
-                            <p className="activity-time">
-                                {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                            </p>
-                        </ActivityItem>
-                    ))}
-                </ActivityList>
-            </ActivitySection>
+            {/* Recent Activity - Show all for admins, only user's own for regular users */}
+            {activities.length > 0 && (
+                <ActivitySection>
+                    <h2 className="activity-title">{isAdmin ? 'Recent Activity' : 'My Recent Activity'}</h2>
+                    <ActivityList>
+                        {activities.map((activity, index) => (
+                            <ActivityItem key={index} style={{ animationDelay: `${0.5 + index * 0.05}s` }}>
+                                <p className="activity-main">
+                                    <span className="username">{activity.username}</span>{' '}
+                                    {activity.action.toLowerCase().replace(/_/g, ' ')}
+                                </p>
+                                <p className="activity-details" title={activity.details}>
+                                    {activity.details}
+                                </p>
+                                <p className="activity-time">
+                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                                </p>
+                            </ActivityItem>
+                        ))}
+                    </ActivityList>
+                </ActivitySection>
+            )}
         </DashboardContainer>
     );
 };
