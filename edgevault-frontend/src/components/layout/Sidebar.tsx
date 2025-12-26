@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History, X } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, Building, FileText, ClipboardCheck, MessageSquare, History, X, BarChart3 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getTotalUnreadCount } from '../../api/chatService';
 import styled from 'styled-components';
@@ -133,6 +133,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onClose }) => {
                         )}
                     </NavItem>
                 )}
+                
+                <NavItem to="/admin/visualizations">
+                    {({ isActive }) => (
+                        <NavContent className={isActive ? 'active' : ''}>
+                            <BarChart3 size={20} />
+                            <span>Analytics</span>
+                        </NavContent>
+                    )}
+                </NavItem>
             </SidebarNav>
             
             <SidebarFooter>
