@@ -23,4 +23,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
     // Find audit logs by username with pagination
     List<AuditLog> findByUsername(String username, Pageable pageable);
+    
+    // Find audit logs after a specific timestamp
+    List<AuditLog> findByTimestampAfter(java.time.LocalDateTime timestamp);
 }

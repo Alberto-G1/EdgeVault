@@ -21,6 +21,7 @@ import AuditLogPage from '../pages/admin/AuditLogPage';
 import AccountSettingsPage from '../pages/admin/AccountSettingsPage';
 import HelpSupportPage from '../pages/admin/HelpSupportPage';
 import AboutPage from '../pages/admin/AboutPage';
+import VisualizationsPage from '../pages/admin/VisualizationsPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -49,6 +50,7 @@ const AppRouter: React.FC = () => {
                 <Route path="chat" element={<ChatPage />} />
                 <Route path="chat/:conversationId" element={<ChatPage />} />
                 <Route path="audit-logs" element={<AuditLogPage />} />
+                <Route path="visualizations" element={<VisualizationsPage />} />
                 <Route path="account-settings" element={<AccountSettingsPage />} />
                 <Route path="help-support" element={<HelpSupportPage />} />
                 <Route path="about" element={<AboutPage />} />
