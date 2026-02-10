@@ -7,6 +7,7 @@ import com.edgevault.edgevaultbackend.exception.ResourceNotFoundException;
 import com.edgevault.edgevaultbackend.model.department.Department;
 import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,14 @@ public class DepartmentService {
     }
 
     public DepartmentDto createDepartment(DepartmentRequestDto request) {
-        departmentRepository.findByName(request.getName()).ifPresent(d -> {
-            throw new DuplicateResourceException("Department with name '" + request.getName() + "' already exists.");
+        String name = ValidationUtil.validateDepartmentName(request.getName());
+        String description = ValidationUtil.validateDescriptionOptional(request.getDescription());
+        
+        departmentRepository.findByName(name).ifPresent(d -> {
+            throw new DuplicateResourceException("Department with name '" + name + "' already exists.");
         });
-        Department department = new Department(request.getName());
-        department.setDescription(request.getDescription());
+        Department department = new Department(name);
+        department.setDescription(description);
         Department saved = departmentRepository.save(department);
 
         // --- AUDIT LOG ---
@@ -47,13 +51,16 @@ public class DepartmentService {
         Department department = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with id: " + id));
 
-        if (!department.getName().equals(request.getName())) {
-            departmentRepository.findByName(request.getName()).ifPresent(d -> {
-                throw new DuplicateResourceException("Department with name '" + request.getName() + "' already exists.");
+        String name = ValidationUtil.validateDepartmentName(request.getName());
+        String description = ValidationUtil.validateDescriptionOptional(request.getDescription());
+        
+        if (!department.getName().equals(name)) {
+            departmentRepository.findByName(name).ifPresent(d -> {
+                throw new DuplicateResourceException("Department with name '" + name + "' already exists.");
             });
-            department.setName(request.getName());
+            department.setName(name);
         }
-        department.setDescription(request.getDescription());
+        department.setDescription(description);
         Department updated = departmentRepository.save(department);
 
         // --- AUDIT LOG ---

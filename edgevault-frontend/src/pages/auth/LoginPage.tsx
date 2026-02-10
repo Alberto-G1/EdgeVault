@@ -7,10 +7,12 @@ import { useTheme } from '../../hooks/useTheme';
 import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
+import { Eye, EyeOff } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('Administrator');
     const [password, setPassword] = useState('Admin@123');
+    const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
@@ -61,15 +63,24 @@ const LoginPage: React.FC = () => {
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Username" 
                         />
-                        <input 
-                            required 
-                            className="input" 
-                            type="password" 
-                            name="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password" 
-                        />
+                        <div className="password-wrapper">
+                            <input 
+                                required 
+                                className="input password-input" 
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Password" 
+                            />
+                            <button 
+                                type="button" 
+                                className="eye-toggle"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                         <div className="remember-forgot-container">
                             <label className="remember-me">
                                 <input 
@@ -79,9 +90,7 @@ const LoginPage: React.FC = () => {
                                 />
                                 <span>Remember me for 30 days</span>
                             </label>
-                            <span className="forgot-password">
-                                <a href="/forgot-password">Forgot Password?</a>
-                            </span>
+                            {/* Forgot password removed - Admins reset passwords for users */}
                         </div>
                         <div className="button-wrapper">
                             <HoverButton 
@@ -321,6 +330,48 @@ const StyledWrapper = styled.div`
         outline: none;
         border-color: var(--light-blue);
         box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+
+    .form .password-wrapper {
+        position: relative;
+        width: 100%;
+        margin-top: 20px;
+
+        @media (max-width: 768px) {
+            margin-top: 15px;
+        }
+    }
+
+    .form .password-wrapper .password-input {
+        margin-top: 0;
+        padding-right: 55px;
+    }
+
+    .form .password-wrapper .eye-toggle {
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(46, 151, 197, 0.1);
+            color: var(--light-blue);
+        }
+
+        @media (max-width: 480px) {
+            right: 15px;
+            padding: 6px;
+        }
     }
 
     .form .remember-forgot-container {

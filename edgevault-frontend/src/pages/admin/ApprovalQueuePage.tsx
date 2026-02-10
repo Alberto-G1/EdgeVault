@@ -465,6 +465,74 @@ const ApprovalQueuePage: React.FC = () => {
                 </StyledTable>
             </TableContainer>
 
+            {/* Mobile Card View */}
+            <MobileCardsContainer>
+                {filteredDocuments.length > 0 ? (
+                    filteredDocuments.map((doc, index) => {
+                        const daysOld = calculateDaysOld(doc.requestedAt);
+                        const urgencyColor = getUrgencyColor(daysOld);
+                        
+                        return (
+                            <MobileCard key={doc.documentId} style={{ animationDelay: `${0.1 + index * 0.05}s` }}>
+                                <MobileCardHeader>
+                                    <DocumentTitle>
+                                        <FileIcon>
+                                            <FileText size={16} />
+                                        </FileIcon>
+                                        {doc.title}
+                                    </DocumentTitle>
+                                </MobileCardHeader>
+                                <MobileCardBody>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Department</MobileCardLabel>
+                                        <MobileCardValue>{doc.departmentName}</MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Requested By</MobileCardLabel>
+                                        <MobileCardValue>{doc.requesterUsername}</MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Request Date</MobileCardLabel>
+                                        <MobileCardValue>{new Date(doc.requestedAt).toLocaleDateString()}</MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Urgency</MobileCardLabel>
+                                        <MobileCardValue>
+                                            <UrgencyBadge style={{ background: `${urgencyColor}15`, color: urgencyColor }}>
+                                                <Clock size={12} />
+                                                {daysOld} day{daysOld !== 1 ? 's' : ''}
+                                            </UrgencyBadge>
+                                        </MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardActionsRow>
+                                        <ApproveButton 
+                                            onClick={() => handleApproveClick(doc)}
+                                            title="Approve"
+                                        >
+                                            <Check size={18} />
+                                            Approve
+                                        </ApproveButton>
+                                        <RejectButton 
+                                            onClick={() => handleRejectClick(doc)}
+                                            title="Reject"
+                                        >
+                                            <X size={18} />
+                                            Reject
+                                        </RejectButton>
+                                    </MobileCardActionsRow>
+                                </MobileCardBody>
+                            </MobileCard>
+                        );
+                    })
+                ) : (
+                    <EmptyState>
+                        <ShieldQuestion size={48} style={{ color: 'var(--text-secondary)', opacity: 0.5 }} />
+                        <h3>No Pending Requests</h3>
+                        <EmptySubtext>There are no deletion requests awaiting approval</EmptySubtext>
+                    </EmptyState>
+                )}
+            </MobileCardsContainer>
+
             {/* Confirmation Modals */}
             <ConfirmationModal
                 isOpen={isApproveModalOpen}
@@ -763,6 +831,10 @@ const TableContainer = styled.div`
     box-shadow: 0 8px 24px var(--shadow);
     overflow: hidden;
     margin-bottom: 2rem;
+
+    @media (max-width: 768px) {
+        display: none;
+    }
 `;
 
 const StyledTable = styled.table`
@@ -1101,6 +1173,96 @@ const EmptySubtext = styled.p`
     font-size: 1rem;
     color: var(--text-secondary);
     font-family: 'Poppins', sans-serif;
+`;
+
+// Mobile Card Components
+const MobileCardsContainer = styled.div`
+    display: none;
+
+    @media (max-width: 768px) {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 2rem;
+    }
+`;
+
+const MobileCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px var(--shadow);
+    animation: slideUp 0.4s ease-out backwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const MobileCardHeader = styled.div`
+    padding: 16px;
+    background: var(--bg-primary);
+    border-bottom: 2px solid rgba(46, 151, 197, 0.2);
+`;
+
+const MobileCardBody = styled.div`
+    padding: 16px;
+`;
+
+const MobileCardRow = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    &:first-child {
+        padding-top: 0;
+    }
+`;
+
+const MobileCardLabel = styled.div`
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+`;
+
+const MobileCardValue = styled.div`
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    max-width: 60%;
+    overflow-wrap: break-word;
+`;
+
+const MobileCardActionsRow = styled.div`
+    display: flex;
+    gap: 12px;
+    padding-top: 16px;
+    margin-top: 12px;
+    border-top: 2px solid var(--border-color);
+
+    button {
+        flex: 1;
+        justify-content: center;
+    }
 `;
 
 export default ApprovalQueuePage;

@@ -10,6 +10,7 @@ import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,33 +43,35 @@ public class ProfileService {
         // --- ROBUST NULL-SAFE CHECKS ---
         // Check for username duplication only if the username has been changed and is not empty
         if (StringUtils.hasText(request.getUsername()) && !Objects.equals(currentUser.getUsername(), request.getUsername())) {
-            userRepository.findByUsername(request.getUsername()).ifPresent(u -> {
+            String validatedUsername = ValidationUtil.validateUsername(request.getUsername());
+            userRepository.findByUsername(validatedUsername).ifPresent(u -> {
                 throw new DuplicateResourceException("Username is already taken.");
             });
-            currentUser.setUsername(request.getUsername());
+            currentUser.setUsername(validatedUsername);
         }
 
         // Check for email duplication only if the email has been changed and is not empty
         if (StringUtils.hasText(request.getEmail()) && !Objects.equals(currentUser.getEmail(), request.getEmail())) {
-            userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
+            String validatedEmail = ValidationUtil.validateEmail(request.getEmail());
+            userRepository.findByEmail(validatedEmail).ifPresent(u -> {
                 throw new DuplicateResourceException("Email is already in use.");
             });
-            currentUser.setEmail(request.getEmail());
+            currentUser.setEmail(validatedEmail);
         }
         // ---------------------------------
 
-        // Update fields
-        currentUser.setFirstName(request.getFirstName());
-        currentUser.setLastName(request.getLastName());
+        // Update fields with validation
+        currentUser.setFirstName(ValidationUtil.validateFirstName(request.getFirstName()));
+        currentUser.setLastName(ValidationUtil.validateLastName(request.getLastName()));
         currentUser.setGender(request.getGender());
-        currentUser.setDateOfBirth(request.getDateOfBirth());
-        currentUser.setPhoneNumber(request.getPhoneNumber());
-        currentUser.setAlternativePhoneNumber(request.getAlternativePhoneNumber());
-        currentUser.setCity(request.getCity());
-        currentUser.setDistrict(request.getDistrict());
-        currentUser.setCountry(request.getCountry());
-        currentUser.setBackupRecoveryEmail(request.getBackupRecoveryEmail());
-        currentUser.setProfilePictureUrl(request.getProfilePictureUrl());
+        currentUser.setDateOfBirth(ValidationUtil.validateOptionalDateOfBirth(request.getDateOfBirth()));
+        currentUser.setPhoneNumber(ValidationUtil.validateOptionalPhone(request.getPhoneNumber()));
+        currentUser.setAlternativePhoneNumber(ValidationUtil.validateAlternativePhoneNumber(request.getAlternativePhoneNumber()));
+        currentUser.setCity(ValidationUtil.validateCity(request.getCity()));
+        currentUser.setDistrict(ValidationUtil.validateDistrict(request.getDistrict()));
+        currentUser.setCountry(ValidationUtil.validateCountry(request.getCountry()));
+        currentUser.setBackupRecoveryEmail(ValidationUtil.validateOptionalEmail(request.getBackupRecoveryEmail()));
+        currentUser.setProfilePictureUrl(ValidationUtil.validateProfilePictureUrl(request.getProfilePictureUrl()));
 
         User updatedUser = userRepository.save(currentUser);
 
@@ -83,10 +86,10 @@ public class ProfileService {
     public UserProfileDto updateCurrentUserWorkProfile(UpdateWorkProfileRequestDto request) {
         User currentUser = getCurrentUser();
 
-        currentUser.setEmployeeId(request.getEmployeeId());
-        currentUser.setJobTitle(request.getJobTitle());
-        currentUser.setDateJoined(request.getDateJoined());
-        currentUser.setSupervisorName(request.getSupervisorName());
+        currentUser.setEmployeeId(ValidationUtil.validateEmployeeId(request.getEmployeeId()));
+        currentUser.setJobTitle(ValidationUtil.validateJobTitle(request.getJobTitle()));
+        currentUser.setDateJoined(ValidationUtil.validateDateJoined(request.getDateJoined()));
+        currentUser.setSupervisorName(ValidationUtil.validateSupervisorName(request.getSupervisorName()));
 
         User updatedUser = userRepository.save(currentUser);
 
@@ -105,7 +108,15 @@ public class ProfileService {
             throw new BadCredentialsException("Incorrect current password.");
         }
 
-        currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // Validate new password
+        String validatedPassword = ValidationUtil.validatePassword(
+            request.getNewPassword(),
+            currentUser.getFirstName(),
+            currentUser.getLastName(),
+            currentUser.getUsername()
+        );
+
+        currentUser.setPassword(passwordEncoder.encode(validatedPassword));
         currentUser.setPasswordLastUpdated(LocalDateTime.now());
         currentUser.setPasswordChangeRequired(false);
 

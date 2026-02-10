@@ -12,6 +12,7 @@ import com.edgevault.edgevaultbackend.repository.chat.MessageReadStatusRepositor
 import com.edgevault.edgevaultbackend.repository.chat.UserPresenceRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,9 @@ public class ChatService {
 
     @Transactional
     public ChatMessage saveMessage(Long conversationId, String content, String senderUsername) {
+        // Validate message content
+        String validatedContent = ValidationUtil.validateChatMessageContent(content);
+        
         User sender = userRepository.findByUsername(senderUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
         Conversation conversation = conversationRepository.findById(conversationId)
@@ -53,7 +57,7 @@ public class ChatService {
         ChatMessage chatMessage = new ChatMessage();
         chatMessage.setConversation(conversation);
         chatMessage.setSender(sender);
-        chatMessage.setContent(content);
+        chatMessage.setContent(validatedContent);
         chatMessage.setTimestamp(LocalDateTime.now());
 
         return chatMessageRepository.save(chatMessage);

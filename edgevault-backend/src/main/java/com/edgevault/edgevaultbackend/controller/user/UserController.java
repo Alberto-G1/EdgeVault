@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -53,5 +54,27 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reset-password")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    public ResponseEntity<Map<String, String>> resetUserPassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        String newPassword = payload.get("newPassword");
+        userService.resetUserPassword(id, newPassword);
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+    }
+
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    public ResponseEntity<UserResponseDto> activateUser(@PathVariable Long id) {
+        UserResponseDto user = userService.activateUser(id);
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/{id}/deactivate")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    public ResponseEntity<UserResponseDto> deactivateUser(@PathVariable Long id) {
+        UserResponseDto user = userService.deactivateUser(id);
+        return ResponseEntity.ok(user);
     }
 }
