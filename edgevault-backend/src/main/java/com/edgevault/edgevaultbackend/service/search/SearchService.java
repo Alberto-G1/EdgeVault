@@ -7,6 +7,7 @@ import com.edgevault.edgevaultbackend.model.document.DocumentVersion;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.document.DocumentRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,6 +41,13 @@ public class SearchService {
      */
     public List<DocumentResponseDto> searchDocuments(String query) {
         try {
+            // Sanitize search query to prevent SQL injection
+            String sanitizedQuery = ValidationUtil.sanitize(query);
+            if (sanitizedQuery == null || sanitizedQuery.trim().isEmpty()) {
+                log.warn("Empty search query provided");
+                return List.of();
+            }
+            
             User currentUser = getCurrentUser();
             
             if (currentUser.getDepartment() == null) {
@@ -48,17 +56,17 @@ public class SearchService {
             }
             
             Long departmentId = currentUser.getDepartment().getId();
-            log.info("Searching documents for query: '{}' in department: {}", query, departmentId);
+            log.info("Searching documents for query: '{}' in department: {}", sanitizedQuery, departmentId);
 
             // Simple database search - much faster and simpler than Elasticsearch!
-            List<Document> documents = documentRepository.searchDocuments(departmentId, query);
+            List<Document> documents = documentRepository.searchDocuments(departmentId, sanitizedQuery);
             
             // Convert to DTOs
             List<DocumentResponseDto> results = documents.stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
             
-            log.info("Found {} results for query: '{}'", results.size(), query);
+            log.info("Found {} results for query: '{}'", results.size(), sanitizedQuery);
             return results;
             
         } catch (Exception e) {

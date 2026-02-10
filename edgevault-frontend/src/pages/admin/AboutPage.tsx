@@ -228,7 +228,7 @@ const AboutPage: React.FC = () => {
 
             <Footer>
                 <FooterText>
-                    © {currentYear} EdgeVault by Grande Technology Solutions. All rights reserved.
+                    © {currentYear} EdgeVault by Grand Grande Technology (GGT) Solutions. All rights reserved.
                 </FooterText>
                 <FooterText>
                     Built with ❤️ for organizations that value security and efficiency.

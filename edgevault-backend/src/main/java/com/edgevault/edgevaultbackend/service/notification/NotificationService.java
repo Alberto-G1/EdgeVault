@@ -3,6 +3,7 @@ package com.edgevault.edgevaultbackend.service.notification;
 import com.edgevault.edgevaultbackend.model.notification.Notification;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.notification.NotificationRepository;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -29,9 +30,12 @@ public class NotificationService {
             return; // Don't send notifications to a null user
         }
 
+        // Validate notification message
+        String validatedMessage = ValidationUtil.validateNotificationMessage(message);
+
         Notification notification = new Notification();
         notification.setRecipient(recipient);
-        notification.setMessage(message);
+        notification.setMessage(validatedMessage);
         notification.setLink(link);
         notification.setTimestamp(LocalDateTime.now());
         notification.setRead(false);

@@ -42,3 +42,17 @@ export const updateUser = async (userId: number, userData: UpdateUserPayload): P
 export const deleteUser = async (userId: number): Promise<void> => {
     await apiClient.delete(`/users/${userId}`);
 };
+
+export const resetUserPassword = async (userId: number, newPassword: string): Promise<void> => {
+    await apiClient.post(`/users/${userId}/reset-password`, { newPassword });
+};
+
+export const activateUser = async (userId: number): Promise<User> => {
+    const response = await apiClient.post<User>(`/users/${userId}/activate`);
+    return response.data;
+};
+
+export const deactivateUser = async (userId: number): Promise<User> => {
+    const response = await apiClient.post<User>(`/users/${userId}/deactivate`);
+    return response.data;
+};

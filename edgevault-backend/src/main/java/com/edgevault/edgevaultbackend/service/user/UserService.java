@@ -13,6 +13,7 @@ import com.edgevault.edgevaultbackend.repository.department.DepartmentRepository
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,16 +46,20 @@ public class UserService {
 
     @Transactional
     public UserResponseDto createUser(CreateUserRequestDto request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new DuplicateResourceException("Username '" + request.getUsername() + "' is already taken.");
+        // Validate and sanitize inputs
+        String username = ValidationUtil.validateUsername(request.getUsername());
+        String email = ValidationUtil.validateEmail(request.getEmail());
+        
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new DuplicateResourceException("Username '" + username + "' is already taken.");
         }
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new DuplicateResourceException("Email '" + request.getEmail() + "' is already in use.");
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new DuplicateResourceException("Email '" + email + "' is already in use.");
         }
 
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode("Default@123U"));
         user.setPasswordChangeRequired(true);
 
@@ -68,22 +73,22 @@ public class UserService {
                 .collect(Collectors.toSet());
         user.setRoles(roles);
         
-        // Save work information
-        user.setEmployeeId(request.getEmployeeId());
-        user.setJobTitle(request.getJobTitle());
-        user.setSupervisorName(request.getSupervisorName());
+        // Save work information with validation
+        user.setEmployeeId(ValidationUtil.validateEmployeeId(request.getEmployeeId()));
+        user.setJobTitle(ValidationUtil.validateJobTitle(request.getJobTitle()));
+        user.setSupervisorName(ValidationUtil.validateSupervisorName(request.getSupervisorName()));
         
         // Parse and set dateJoined
         if (request.getDateJoined() != null && !request.getDateJoined().isEmpty()) {
             try {
-                user.setDateJoined(java.time.LocalDate.parse(request.getDateJoined()));
+                user.setDateJoined(ValidationUtil.validateDateJoined(java.time.LocalDate.parse(request.getDateJoined())));
             } catch (Exception e) {
                 // If parsing fails, set to today
-                user.setDateJoined(java.time.LocalDate.now());
+                user.setDateJoined(ValidationUtil.validateDateJoined(null));
             }
         } else {
             // Default to today if not provided
-            user.setDateJoined(java.time.LocalDate.now());
+            user.setDateJoined(ValidationUtil.validateDateJoined(null));
         }
 
         User savedUser = userRepository.save(user);
@@ -105,10 +110,11 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
-                throw new DuplicateResourceException("Email '" + request.getEmail() + "' is already in use.");
+            String validatedEmail = ValidationUtil.validateEmail(request.getEmail());
+            userRepository.findByEmail(validatedEmail).ifPresent(u -> {
+                throw new DuplicateResourceException("Email '" + validatedEmail + "' is already in use.");
             });
-            user.setEmail(request.getEmail());
+            user.setEmail(validatedEmail);
         }
 
         Department department = departmentRepository.findById(request.getDepartmentId())
@@ -128,15 +134,15 @@ public class UserService {
             user.setAccountStatus(com.edgevault.edgevaultbackend.model.user.AccountStatus.SUSPENDED);
         }
         
-        // Update work information
-        user.setEmployeeId(request.getEmployeeId());
-        user.setJobTitle(request.getJobTitle());
-        user.setSupervisorName(request.getSupervisorName());
+        // Update work information with validation
+        user.setEmployeeId(ValidationUtil.validateEmployeeId(request.getEmployeeId()));
+        user.setJobTitle(ValidationUtil.validateJobTitle(request.getJobTitle()));
+        user.setSupervisorName(ValidationUtil.validateSupervisorName(request.getSupervisorName()));
         
         // Parse and set dateJoined if provided
         if (request.getDateJoined() != null && !request.getDateJoined().isEmpty()) {
             try {
-                user.setDateJoined(java.time.LocalDate.parse(request.getDateJoined()));
+                user.setDateJoined(ValidationUtil.validateDateJoined(java.time.LocalDate.parse(request.getDateJoined())));
             } catch (Exception e) {
                 // Keep existing dateJoined if parsing fails
             }
@@ -176,6 +182,74 @@ public class UserService {
         String auditDetails = String.format("Deleted user '%s' (ID: %d).", user.getUsername(), userId);
         auditService.recordEvent(getCurrentUsername(), "USER_DELETE", auditDetails);
         // -----------------
+    }
+
+    @Transactional
+    public void resetUserPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Validate new password
+        String validatedPassword = ValidationUtil.validatePassword(
+            newPassword,
+            user.getFirstName(),
+            user.getLastName(),
+            user.getUsername()
+        );
+
+        user.setPassword(passwordEncoder.encode(validatedPassword));
+        user.setPasswordLastUpdated(java.time.LocalDateTime.now());
+        user.setPasswordChangeRequired(true); // Force user to change password on next login
+        userRepository.save(user);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Admin reset password for user '%s' (ID: %d).", user.getUsername(), userId);
+        auditService.recordEvent(getCurrentUsername(), "USER_PASSWORD_RESET_BY_ADMIN", auditDetails);
+        // -----------------
+    }
+
+    @Transactional
+    public UserResponseDto activateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        user.setAccountStatus(com.edgevault.edgevaultbackend.model.user.AccountStatus.ACTIVE);
+        User updatedUser = userRepository.save(user);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Activated user '%s' (ID: %d).", user.getUsername(), userId);
+        auditService.recordEvent(getCurrentUsername(), "USER_ACTIVATE", auditDetails);
+        // -----------------
+
+        return mapToUserResponseDto(updatedUser);
+    }
+
+    @Transactional
+    public UserResponseDto deactivateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Prevent deactivating the last super admin
+        boolean isSuperAdmin = user.getRoles().stream().anyMatch(role -> role.getName().equals("Super Admin"));
+        if (isSuperAdmin) {
+            long activeSuperAdminCount = userRepository.findAll().stream()
+                    .filter(u -> u.getAccountStatus() == com.edgevault.edgevaultbackend.model.user.AccountStatus.ACTIVE)
+                    .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("Super Admin")))
+                    .count();
+            if (activeSuperAdminCount <= 1) {
+                throw new IllegalStateException("Cannot deactivate the last active super administrator.");
+            }
+        }
+
+        user.setAccountStatus(com.edgevault.edgevaultbackend.model.user.AccountStatus.SUSPENDED);
+        User updatedUser = userRepository.save(user);
+
+        // --- AUDIT LOG ---
+        String auditDetails = String.format("Deactivated user '%s' (ID: %d).", user.getUsername(), userId);
+        auditService.recordEvent(getCurrentUsername(), "USER_DEACTIVATE", auditDetails);
+        // -----------------
+
+        return mapToUserResponseDto(updatedUser);
     }
 
     private UserResponseDto mapToUserResponseDto(User user) {

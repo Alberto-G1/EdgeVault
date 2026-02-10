@@ -9,6 +9,7 @@ import com.edgevault.edgevaultbackend.model.role.Role;
 import com.edgevault.edgevaultbackend.repository.permission.PermissionRepository;
 import com.edgevault.edgevaultbackend.repository.role.RoleRepository;
 import com.edgevault.edgevaultbackend.service.audit.AuditService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,11 +42,13 @@ public class RoleService {
 
     @Transactional
     public RoleDto createRole(RoleRequestDto request) {
-        roleRepository.findByName(request.getName()).ifPresent(r -> {
-            throw new DuplicateResourceException("Role with name '" + request.getName() + "' already exists.");
+        String roleName = ValidationUtil.validateRoleName(request.getName());
+        
+        roleRepository.findByName(roleName).ifPresent(r -> {
+            throw new DuplicateResourceException("Role with name '" + roleName + "' already exists.");
         });
 
-        Role role = new Role(request.getName());
+        Role role = new Role(roleName);
         if (request.getPermissions() != null) {
             Set<Permission> permissions = findPermissionsByName(request.getPermissions());
             role.setPermissions(permissions);
@@ -69,11 +72,13 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + roleId));
 
-        if (!role.getName().equals(request.getName())) {
-            roleRepository.findByName(request.getName()).ifPresent(r -> {
-                throw new DuplicateResourceException("Role with name '" + request.getName() + "' already exists.");
+        String roleName = ValidationUtil.validateRoleName(request.getName());
+        
+        if (!role.getName().equals(roleName)) {
+            roleRepository.findByName(roleName).ifPresent(r -> {
+                throw new DuplicateResourceException("Role with name '" + roleName + "' already exists.");
             });
-            role.setName(request.getName());
+            role.setName(roleName);
         }
 
         Set<Permission> permissions = new HashSet<>();

@@ -7,6 +7,7 @@ import styled from 'styled-components';
 import Loader from '../../components/common/Loader';
 import HoverButton from '../../components/common/HoverButton';
 import { Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ResetPasswordPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
@@ -14,6 +15,8 @@ const ResetPasswordPage: React.FC = () => {
     const [token, setToken] = useState<string>('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const { mode } = useTheme();
@@ -157,16 +160,21 @@ const ResetPasswordPage: React.FC = () => {
                     </Subtitle>
                     <form onSubmit={handleSubmit} className="form">
                         <InputGroup>
-                            <input 
-                                required 
-                                className="input" 
-                                type="password" 
-                                name="newPassword"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="New Password" 
-                                autoFocus
-                            />
+                            <PasswordWrapper>
+                                <input 
+                                    required 
+                                    className="input" 
+                                    type={showNewPassword ? 'text' : 'password'}
+                                    name="newPassword"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="New Password" 
+                                    autoFocus
+                                />
+                                <EyeToggle onClick={() => setShowNewPassword(!showNewPassword)} type="button">
+                                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </EyeToggle>
+                            </PasswordWrapper>
                             {newPassword && (
                                 <>
                                     <PasswordStrengthBar>
@@ -180,15 +188,20 @@ const ResetPasswordPage: React.FC = () => {
                         </InputGroup>
 
                         <InputGroup>
-                            <input 
-                                required 
-                                className="input" 
-                                type="password" 
-                                name="confirmPassword"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm New Password" 
-                            />
+                            <PasswordWrapper>
+                                <input 
+                                    required 
+                                    className="input" 
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    name="confirmPassword"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Confirm New Password" 
+                                />
+                                <EyeToggle onClick={() => setShowConfirmPassword(!showConfirmPassword)} type="button">
+                                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </EyeToggle>
+                            </PasswordWrapper>
                         </InputGroup>
 
                         <div className="info-box">
@@ -814,6 +827,39 @@ const SuccessMessage = styled.div`
 const InputGroup = styled.div`
     position: relative;
     width: 100%;
+`;
+
+const PasswordWrapper = styled.div`
+    position: relative;
+    width: 100%;
+`;
+
+const EyeToggle = styled.button`
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    z-index: 10;
+
+    &:hover {
+        background: rgba(46, 151, 197, 0.1);
+        color: var(--light-blue);
+    }
+
+    @media (max-width: 768px) {
+        right: 15px;
+        padding: 6px;
+    }
 `;
 
 const PasswordStrengthBar = styled.div`

@@ -2,10 +2,7 @@ package com.edgevault.edgevaultbackend.controller.auth;
 
 import com.edgevault.edgevaultbackend.dto.auth.AuthenticationResponse;
 import com.edgevault.edgevaultbackend.dto.auth.LoginRequest;
-import com.edgevault.edgevaultbackend.dto.auth.PasswordResetRequest;
-import com.edgevault.edgevaultbackend.dto.auth.ForgotPasswordRequest;
 import com.edgevault.edgevaultbackend.service.auth.AuthenticationService;
-import com.edgevault.edgevaultbackend.service.security.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -24,7 +21,6 @@ import java.util.Map;
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
-    private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(
@@ -46,22 +42,8 @@ public class AuthenticationController {
         return request.getRemoteAddr();
     }
 
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        passwordResetService.generateResetToken(request.getEmail());
-        // Return generic response to prevent account enumeration
-        return ResponseEntity.ok(Map.of(
-                "message", "If an account with that email exists, a password reset link has been sent."
-        ));
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
-        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
-        return ResponseEntity.ok(Map.of(
-                "message", "Password has been reset successfully. You can now log in with your new password."
-        ));
-    }
+    // REMOVED: Forgot password and reset password endpoints
+    // Password reset is now handled by administrators only through user management
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request, HttpServletResponse response) {

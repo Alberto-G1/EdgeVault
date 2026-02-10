@@ -5,6 +5,7 @@ import com.edgevault.edgevaultbackend.model.security.PasswordResetToken;
 import com.edgevault.edgevaultbackend.model.user.User;
 import com.edgevault.edgevaultbackend.repository.security.PasswordResetTokenRepository;
 import com.edgevault.edgevaultbackend.repository.user.UserRepository;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,10 +40,13 @@ public class PasswordResetService {
      */
     @Transactional
     public void generateResetToken(String email) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        // Validate email format
+        String validatedEmail = ValidationUtil.validateEmail(email);
+        
+        Optional<User> userOptional = userRepository.findByEmail(validatedEmail);
         
         if (userOptional.isEmpty()) {
-            log.info("Password reset requested for non-existent email: {}", email);
+            log.info("Password reset requested for non-existent email: {}", validatedEmail);
             // Return silently to prevent account enumeration
             return;
         }
@@ -95,8 +99,16 @@ public class PasswordResetService {
 
         User user = resetToken.getUser();
         
+        // Validate new password
+        String validatedPassword = ValidationUtil.validatePassword(
+            newPassword,
+            user.getFirstName(),
+            user.getLastName(),
+            user.getUsername()
+        );
+        
         // Encode and set new password
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(passwordEncoder.encode(validatedPassword));
         user.setPasswordLastUpdated(LocalDateTime.now());
         user.setPasswordChangeRequired(false);
         userRepository.save(user);

@@ -462,6 +462,64 @@ const AuditLogPage: React.FC = () => {
                 </StyledTable>
             </TableContainer>
             
+            {/* Mobile Card View */}
+            <MobileCardsContainer>
+                {currentLogs.length > 0 ? (
+                    currentLogs.map((log, index) => {
+                        const actionColor = getActionColor(log.action);
+                        const isHashValid = log.id === 1 ? 
+                            log.previousHash === "0" : 
+                            log.previousHash === logs.find(l => l.id === log.id - 1)?.currentHash;
+                        
+                        return (
+                            <MobileCard key={log.id} style={{ animationDelay: `${0.1 + index * 0.05}s` }}>
+                                <MobileCardHeader>
+                                    <HashCell $valid={isHashValid}>
+                                        <Lock size={12} />
+                                        {isHashValid ? '✓ Valid' : '✗ Invalid'}
+                                    </HashCell>
+                                </MobileCardHeader>
+                                <MobileCardBody>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Timestamp</MobileCardLabel>
+                                        <MobileCardValue>
+                                            <div>{format(new Date(log.timestamp), 'MMM dd, yyyy')}</div>
+                                            <TimeText>{format(new Date(log.timestamp), 'HH:mm:ss')}</TimeText>
+                                        </MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>User</MobileCardLabel>
+                                        <MobileCardValue>{log.username}</MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Action</MobileCardLabel>
+                                        <MobileCardValue>
+                                            <ActionBadge style={{ background: `${actionColor}15`, color: actionColor }}>
+                                                {log.action}
+                                            </ActionBadge>
+                                        </MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>Details</MobileCardLabel>
+                                        <MobileCardValue style={{ maxWidth: '100%', textAlign: 'left'}}>{log.details}</MobileCardValue>
+                                    </MobileCardRow>
+                                    <MobileCardRow>
+                                        <MobileCardLabel>ID</MobileCardLabel>
+                                        <MobileCardValue>{log.id}</MobileCardValue>
+                                    </MobileCardRow>
+                                </MobileCardBody>
+                            </MobileCard>
+                        );
+                    })
+                ) : (
+                    <EmptyState>
+                        <Activity size={48} style={{ color: 'var(--text-secondary)', opacity: 0.5 }} />
+                        <h3>No Audit Logs Found</h3>
+                        <EmptySubtext>Try adjusting your filters or search query</EmptySubtext>
+                    </EmptyState>
+                )}
+            </MobileCardsContainer>
+            
             <PaginationContainer>
                 <PaginationInfo>
                     Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} audit logs
@@ -852,26 +910,7 @@ const TableContainer = styled.div`
     overflow: hidden;
     
     @media (max-width: 768px) {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        
-        &::-webkit-scrollbar {
-            height: 8px;
-        }
-        
-        &::-webkit-scrollbar-track {
-            background: var(--bg-primary);
-            border-radius: 4px;
-        }
-        
-        &::-webkit-scrollbar-thumb {
-            background: rgba(46, 151, 197, 0.5);
-            border-radius: 4px;
-            
-            &:hover {
-                background: rgba(46, 151, 197, 0.7);
-            }
-        }
+        display: none;
     }
 `;
 
@@ -1183,6 +1222,86 @@ const PageEllipsis = styled.span`
     padding: 8px 4px;
     color: var(--text-secondary);
     font-weight: 600;
+`;
+
+// Mobile Card Components
+const MobileCardsContainer = styled.div`
+    display: none;
+
+    @media (max-width: 768px) {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+`;
+
+const MobileCard = styled.div`
+    background: var(--bg-secondary);
+    border: 2px solid rgba(46, 151, 197, 0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px var(--shadow);
+    animation: slideUp 0.4s ease-out backwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const MobileCardHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-bottom: 2px solid rgba(46, 151, 197, 0.2);
+`;
+
+const MobileCardBody = styled.div`
+    padding: 16px;
+`;
+
+const MobileCardRow = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    &:first-child {
+        padding-top: 0;
+    }
+`;
+
+const MobileCardLabel = styled.div`
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 80px;
+`;
+
+const MobileCardValue = styled.div`
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    flex: 1;
+    overflow-wrap: break-word;
 `;
 
 export default AuditLogPage;

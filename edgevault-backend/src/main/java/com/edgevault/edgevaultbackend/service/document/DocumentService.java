@@ -16,6 +16,7 @@ import com.edgevault.edgevaultbackend.service.audit.AuditService;
 import com.edgevault.edgevaultbackend.service.search.SearchService;
 import com.edgevault.edgevaultbackend.service.storage.FileStorageService;
 import com.edgevault.edgevaultbackend.service.notification.NotificationService;
+import com.edgevault.edgevaultbackend.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -50,6 +51,10 @@ public class DocumentService {
     public DocumentResponseDto uploadNewDocument(String title, String description, MultipartFile file) throws IOException {
         User currentUser = getCurrentUser();
 
+        // Validate inputs
+        String validatedTitle = ValidationUtil.validateDocumentTitle(title);
+        String validatedDescription = ValidationUtil.validateDescriptionOptional(description);
+
         Department userDepartment = currentUser.getDepartment();
         if (Objects.isNull(userDepartment)) {
             throw new IllegalStateException("Cannot upload document: User '" + currentUser.getUsername() + "' is not assigned to a department.");
@@ -60,8 +65,8 @@ public class DocumentService {
         fileStorageService.uploadFile(s3ObjectKey, file);
 
         Document document = new Document();
-        document.setTitle(title);
-        document.setDescription(description);
+        document.setTitle(validatedTitle);
+        document.setDescription(validatedDescription);
         document.setOriginalFileName(file.getOriginalFilename());
         document.setDepartment(userDepartment);
 
@@ -92,6 +97,10 @@ public class DocumentService {
     @Transactional
     public DocumentResponseDto uploadNewVersion(Long documentId, MultipartFile file, String description) throws IOException {
         User currentUser = getCurrentUser();
+        
+        // Validate description
+        String validatedDescription = ValidationUtil.validateDescriptionOptional(description);
+        
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
 
@@ -119,7 +128,7 @@ public class DocumentService {
         newVersion.setSizeInBytes(file.getSize());
         newVersion.setUploadTimestamp(LocalDateTime.now());
         newVersion.setUploader(currentUser);
-        newVersion.setDescription(description);
+        newVersion.setDescription(validatedDescription);
 
         // Add the new version to the document's version list
         document.getVersions().add(newVersion);
@@ -201,6 +210,10 @@ public class DocumentService {
     @Transactional
     public void updateVersionDescription(Long versionId, String description) {
         User currentUser = getCurrentUser();
+        
+        // Validate description
+        String validatedDescription = ValidationUtil.validateDescriptionOptional(description);
+        
         DocumentVersion version = documentVersionRepository.findById(versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document version not found with id: " + versionId));
 
@@ -209,7 +222,7 @@ public class DocumentService {
             throw new org.springframework.security.access.AccessDeniedException("You do not have permission to update this version.");
         }
 
-        version.setDescription(description);
+        version.setDescription(validatedDescription);
         documentVersionRepository.save(version);
 
         // --- AUDIT LOG ---

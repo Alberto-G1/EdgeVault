@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useCallback} from 'react';
-import { getAllUserDetails, createUser, updateUser, deleteUser } from '../../api/userService'; // <-- CRITICAL: Use getAllUserDetails
+import { getAllUserDetails, deleteUser, activateUser, deactivateUser, resetUserPassword } from '../../api/userService';
 import type { User } from '../../types/user';
 import { useToast } from '../../context/ToastContext';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
-import UserForm from '../../components/admin/UserForm';
+import { Edit, Trash2, Eye, EyeOff, UserCheck, UserX, Key } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import FullPageLoader from '../../components/common/FullPageLoader';
 import HoverButton from '../../components/common/HoverButton';
 import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import UserDetailsModal from '../../components/common/UserDetailsModal';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const resolveUserProfileImage = (userRecord: User) => {
     const candidates = [
@@ -36,17 +37,26 @@ const resolveUserProfileImage = (userRecord: User) => {
 const UserManagementPage: React.FC = () => {
     const { showError, showSuccess } = useToast();
     const { hasPermission, hasAnyPermission } = usePermissions();
+    const navigate = useNavigate();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [userToEdit, setUserToEdit] = useState<User | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [viewDetailsModalOpen, setViewDetailsModalOpen] = useState(false);
     const [userToView, setUserToView] = useState<User | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<'activate' | 'deactivate' | null>(null);
+    const [userIdToConfirm, setUserIdToConfirm] = useState<number | null>(null);
+    const [isConfirming, setIsConfirming] = useState(false);
+    const [passwordResetModalOpen, setPasswordResetModalOpen] = useState(false);
+    const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     
 
     // Wrap fetchUsers in useCallback to make it a stable function
@@ -73,39 +83,54 @@ const UserManagementPage: React.FC = () => {
     }, [hasPermission, fetchUsers]);
     // -----------------------
 
-    const handleOpenModal = (user: User | null = null) => {
-        setUserToEdit(user);
-        setIsModalOpen(true);
+    const handleOpenModal = (userId?: number) => {
+        if (userId) {
+            navigate(`/admin/users/edit/${userId}`);
+        } else {
+            navigate('/admin/users/new');
+        }
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setUserToEdit(null);
+    const handleActivateUser = (userId: number) => {
+        setUserIdToConfirm(userId);
+        setConfirmAction('activate');
+        setIsConfirmModalOpen(true);
     };
 
-    const handleSaveUser = async (formData: any) => {
-        setIsSubmitting(true);
-        const payload = { 
-            email: formData.email, 
-            enabled: formData.enabled, 
-            roles: formData.roles, 
-            departmentId: formData.departmentId 
-        };
+    const handleDeactivateUser = (userId: number) => {
+        setUserIdToConfirm(userId);
+        setConfirmAction('deactivate');
+        setIsConfirmModalOpen(true);
+    };
 
+    const handleConfirmAction = async () => {
+        if (userIdToConfirm === null || confirmAction === null) return;
+
+        setIsConfirming(true);
         try {
-            if (userToEdit) {
-                await updateUser(userToEdit.id, payload);
-                showSuccess('Success', 'User updated successfully!');
-            } else {
-                await createUser({ ...payload, username: formData.username });
-                showSuccess('Success', 'User created successfully!');
+            if (confirmAction === 'activate') {
+                await activateUser(userIdToConfirm);
+                showSuccess('Success', 'User activated successfully!');
+            } else if (confirmAction === 'deactivate') {
+                await deactivateUser(userIdToConfirm);
+                showSuccess('Success', 'User deactivated successfully!');
             }
-            handleCloseModal();
             fetchUsers();
+            setIsConfirmModalOpen(false);
         } catch (error: any) {
-            showError('Error', error.response?.data?.message || 'Failed to save user.');
+            showError('Error', error.response?.data?.message || `Failed to ${confirmAction} user.`);
         } finally {
-            setIsSubmitting(false);
+            setIsConfirming(false);
+            setUserIdToConfirm(null);
+            setConfirmAction(null);
+        }
+    };
+
+    const handleCloseConfirmModal = () => {
+        if (!isConfirming) {
+            setIsConfirmModalOpen(false);
+            setUserIdToConfirm(null);
+            setConfirmAction(null);
         }
     };
     
@@ -131,6 +156,47 @@ const UserManagementPage: React.FC = () => {
     const handleViewDetails = (user: User) => {
         setUserToView(user);
         setViewDetailsModalOpen(true);
+    };
+
+    const handleOpenPasswordResetModal = (user: User) => {
+        setUserToResetPassword(user);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordResetModalOpen(true);
+    };
+
+    const handleResetPassword = async () => {
+        if (!userToResetPassword) return;
+
+        // Validation
+        if (!newPassword || newPassword.trim().length === 0) {
+            showError('Validation Error', 'Please enter a new password.');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            showError('Validation Error', 'Password must be at least 8 characters long.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showError('Validation Error', 'Passwords do not match.');
+            return;
+        }
+
+        setIsResettingPassword(true);
+        try {
+            await resetUserPassword(userToResetPassword.id, newPassword);
+            showSuccess('Success', `Password reset successfully for user ${userToResetPassword.username}. User will be required to change password on next login.`);
+            setPasswordResetModalOpen(false);
+            setUserToResetPassword(null);
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            showError('Error', error.response?.data?.message || 'Failed to reset password.');
+        } finally {
+            setIsResettingPassword(false);
+        }
     };
 
     if (loading) return <FullPageLoader />;
@@ -197,13 +263,13 @@ const UserManagementPage: React.FC = () => {
                                 <TableCell>{user.email}</TableCell>
                                 <TableCell>{user.departmentName || 'Not assigned'}</TableCell>
                                 <TableCell>
-                                    <StatusBadge $enabled={user.enabled}>
+                                    <StatusBadge $enabled={user.enabled ?? true}>
                                         {user.enabled ? 'Active' : 'Inactive'}
                                     </StatusBadge>
                                 </TableCell>
                                 <TableCell>
                                     <RolesCell>
-                                        {(user.roles || []).length > 0 ? (
+                                        {(user.roles && user.roles.length > 0) ? (
                                             user.roles.slice(0, 2).map((r, idx) => (
                                                 <RolePill key={idx}>{r}</RolePill>
                                             ))
@@ -222,9 +288,23 @@ const UserManagementPage: React.FC = () => {
                                                 <Eye size={18}/>
                                             </ActionButton>
                                             {hasPermission('USER_UPDATE') && (
-                                                <ActionButton onClick={() => handleOpenModal(user)} className="edit">
-                                                    <Edit size={18}/>
-                                                </ActionButton>
+                                                <>
+                                                    <ActionButton onClick={() => handleOpenModal(user.id)} className="edit">
+                                                        <Edit size={18}/>
+                                                    </ActionButton>
+                                                    <ActionButton onClick={() => handleOpenPasswordResetModal(user)} className="reset-password">
+                                                        <Key size={18}/>
+                                                    </ActionButton>
+                                                    {user.enabled ? (
+                                                        <ActionButton onClick={() => handleDeactivateUser(user.id)} className="deactivate">
+                                                            <UserX size={18}/>
+                                                        </ActionButton>
+                                                    ) : (
+                                                        <ActionButton onClick={() => handleActivateUser(user.id)} className="activate">
+                                                            <UserCheck size={18}/>
+                                                        </ActionButton>
+                                                    )}
+                                                </>
                                             )}
                                             {hasPermission('USER_DELETE') && (
                                                 <ActionButton onClick={() => handleDeleteUser(user.id)} className="delete">
@@ -239,6 +319,95 @@ const UserManagementPage: React.FC = () => {
                     </tbody>
                 </StyledTable>
             </TableContainer>
+            
+            {/* Mobile Card View */}
+            <MobileCardsContainer>
+                {currentUsers.map((user, index) => (
+                    <MobileCard key={user.id} style={{ animationDelay: `${0.1 + index * 0.05}s` }}>
+                        <MobileCardHeader>
+                            <ProfileAvatar
+                                src={resolveUserProfileImage(user)}
+                                alt={user.username}
+                                onError={(event) => {
+                                    const target = event.currentTarget;
+                                    target.onerror = null;
+                                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=2E97C5&color=fff`;
+                                }}
+                            />
+                            {hasAnyPermission(['USER_UPDATE', 'USER_DELETE']) && (
+                                <MobileActions>
+                                    <ActionButton onClick={() => handleViewDetails(user)} className="view">
+                                        <Eye size={18}/>
+                                    </ActionButton>
+                                    {hasPermission('USER_UPDATE') && (
+                                        <>
+                                            <ActionButton onClick={() => handleOpenModal(user.id)} className="edit">
+                                                <Edit size={18}/>
+                                            </ActionButton>
+                                            <ActionButton onClick={() => handleOpenPasswordResetModal(user)} className="reset-password">
+                                                <Key size={18}/>
+                                            </ActionButton>
+                                            {user.enabled ? (
+                                                <ActionButton onClick={() => handleDeactivateUser(user.id)} className="deactivate">
+                                                    <UserX size={18}/>
+                                                </ActionButton>
+                                            ) : (
+                                                <ActionButton onClick={() => handleActivateUser(user.id)} className="activate">
+                                                    <UserCheck size={18}/>
+                                                </ActionButton>
+                                            )}
+                                        </>
+                                    )}
+                                    {hasPermission('USER_DELETE') && (
+                                        <ActionButton onClick={() => handleDeleteUser(user.id)} className="delete">
+                                            <Trash2 size={18}/>
+                                        </ActionButton>
+                                    )}
+                                </MobileActions>
+                            )}
+                        </MobileCardHeader>
+                        <MobileCardBody>
+                            <MobileCardRow>
+                                <MobileCardLabel>Username</MobileCardLabel>
+                                <MobileCardValue>{user.username}</MobileCardValue>
+                            </MobileCardRow>
+                            <MobileCardRow>
+                                <MobileCardLabel>Email</MobileCardLabel>
+                                <MobileCardValue>{user.email}</MobileCardValue>
+                            </MobileCardRow>
+                            <MobileCardRow>
+                                <MobileCardLabel>Department</MobileCardLabel>
+                                <MobileCardValue>{user.departmentName || 'Not assigned'}</MobileCardValue>
+                            </MobileCardRow>
+                            <MobileCardRow>
+                                <MobileCardLabel>Status</MobileCardLabel>
+                                <MobileCardValue>
+                                    <StatusBadge $enabled={user.enabled ?? true}>
+                                        {user.enabled ? 'Active' : 'Inactive'}
+                                    </StatusBadge>
+                                </MobileCardValue>
+                            </MobileCardRow>
+                            <MobileCardRow>
+                                <MobileCardLabel>Roles</MobileCardLabel>
+                                <MobileCardValue>
+                                    <RolesCell>
+                                        {(user.roles && user.roles.length > 0) ? (
+                                            user.roles.slice(0, 2).map((r, idx) => (
+                                                <RolePill key={idx}>{r}</RolePill>
+                                            ))
+                                        ) : (
+                                            <span style={{ color: 'var(--text-secondary)' }}>No roles</span>
+                                        )}
+                                        {user.roles && user.roles.length > 2 && (
+                                            <MoreBadge>+{user.roles.length - 2}</MoreBadge>
+                                        )}
+                                    </RolesCell>
+                                </MobileCardValue>
+                            </MobileCardRow>
+                        </MobileCardBody>
+                    </MobileCard>
+                ))}
+            </MobileCardsContainer>
             
             <PaginationContainer>
                 <PaginationInfo>
@@ -302,15 +471,6 @@ const UserManagementPage: React.FC = () => {
                 </PaginationControls>
             </PaginationContainer>
 
-            {isModalOpen && (
-                <UserForm 
-                    userToEdit={userToEdit} 
-                    onSave={handleSaveUser} 
-                    onCancel={handleCloseModal} 
-                    isLoading={isSubmitting} 
-                />
-            )}
-
             <DeleteConfirmModal
                 isOpen={deleteModalOpen}
                 onClose={() => setDeleteModalOpen(false)}
@@ -326,6 +486,104 @@ const UserManagementPage: React.FC = () => {
                 onClose={() => setViewDetailsModalOpen(false)}
                 user={userToView}
             />
+
+            <ConfirmationModal
+                isOpen={isConfirmModalOpen}
+                onClose={handleCloseConfirmModal}
+                onConfirm={handleConfirmAction}
+                title={confirmAction === 'activate' ? 'Activate User' : 'Deactivate User'}
+                message={
+                    confirmAction === 'activate'
+                        ? 'Are you sure you want to activate this user? They will regain access to the system.'
+                        : 'Are you sure you want to deactivate this user? They will lose access to the system until reactivated.'
+                }
+                confirmText={confirmAction === 'activate' ? 'Activate' : 'Deactivate'}
+                isConfirming={isConfirming}
+                isApprove={confirmAction === 'activate'}
+                icon={confirmAction === 'activate' ? <UserCheck size={40} /> : <UserX size={40} />}
+            />
+
+            {/* Password Reset Modal */}
+            {passwordResetModalOpen && (
+                <PasswordResetModalOverlay onClick={() => !isResettingPassword && setPasswordResetModalOpen(false)}>
+                    <PasswordResetModalContainer onClick={(e) => e.stopPropagation()}>
+                        <PasswordResetModalHeader>
+                            <h3>Reset Password</h3>
+                            <button onClick={() => !isResettingPassword && setPasswordResetModalOpen(false)}>
+                                ×
+                            </button>
+                        </PasswordResetModalHeader>
+                        
+                        <PasswordResetModalBody>
+                            <UserInfo>
+                                <ProfileAvatar
+                                    src={userToResetPassword ? resolveUserProfileImage(userToResetPassword) : ''}
+                                    alt={userToResetPassword?.username}
+                                />
+                                <div>
+                                    <h4>{userToResetPassword?.username}</h4>
+                                    <p>{userToResetPassword?.email}</p>
+                                </div>
+                            </UserInfo>
+
+                            <InfoBox>
+                                <Key size={20} />
+                                <div>
+                                    <strong>Important:</strong> The user will be required to change this password on their next login.
+                                </div>
+                            </InfoBox>
+
+                            <FormGroup>
+                                <Label>New Password</Label>
+                                <PasswordWrapper>
+                                    <PasswordInput
+                                        type={showNewPassword ? 'text' : 'password'}
+                                        placeholder="Enter new password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        disabled={isResettingPassword}
+                                    />
+                                    <EyeToggle onClick={() => setShowNewPassword(!showNewPassword)}>
+                                        {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </EyeToggle>
+                                </PasswordWrapper>
+                                <HelpText>Minimum 8 characters required</HelpText>
+                            </FormGroup>
+
+                            <FormGroup>
+                                <Label>Confirm Password</Label>
+                                <PasswordWrapper>
+                                    <PasswordInput
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        placeholder="Confirm new password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        disabled={isResettingPassword}
+                                    />
+                                    <EyeToggle onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </EyeToggle>
+                                </PasswordWrapper>
+                            </FormGroup>
+                        </PasswordResetModalBody>
+
+                        <PasswordResetModalFooter>
+                            <CancelButton 
+                                onClick={() => setPasswordResetModalOpen(false)}
+                                disabled={isResettingPassword}
+                            >
+                                Cancel
+                            </CancelButton>
+                            <ResetButton 
+                                onClick={handleResetPassword}
+                                disabled={isResettingPassword}
+                            >
+                                {isResettingPassword ? 'Resetting...' : 'Reset Password'}
+                            </ResetButton>
+                        </PasswordResetModalFooter>
+                    </PasswordResetModalContainer>
+                </PasswordResetModalOverlay>
+            )}
         </PageContainer>
     );
 };
@@ -406,26 +664,7 @@ const TableContainer = styled.div`
     animation: slideUp 0.5s ease-out 0.1s backwards;
 
     @media (max-width: 768px) {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        
-        &::-webkit-scrollbar {
-            height: 8px;
-        }
-        
-        &::-webkit-scrollbar-track {
-            background: var(--bg-primary);
-            border-radius: 4px;
-        }
-        
-        &::-webkit-scrollbar-thumb {
-            background: rgba(46, 151, 197, 0.5);
-            border-radius: 4px;
-            
-            &:hover {
-                background: rgba(46, 151, 197, 0.7);
-            }
-        }
+        display: none;
     }
 `;
 
@@ -492,7 +731,7 @@ const StatusBadge = styled.span<{ $enabled: boolean }>`
     font-size: 12px;
     font-weight: 600;
     border-radius: 20px;
-    background: ${props => props.enabled ? 'var(--success)' : 'var(--danger)'};
+    background: ${props => props.$enabled ? 'var(--success)' : 'var(--danger)'};
     color: white;
 
     @media (max-width: 768px) {
@@ -744,9 +983,405 @@ const ActionButton = styled.button`
         }
     }
 
+    &.activate {
+        &:hover {
+            background: #22c55e;
+            color: white;
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+
+    &.deactivate {
+        &:hover {
+            background: #f59e0b;
+            color: white;
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+
+    &.reset-password {
+        &:hover {
+            background: #8b5cf6;
+            color: white;
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            
+            &::before {
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+
     @media (max-width: 768px) {
         padding: 8px;
     }
+`;
+
+// Password Reset Modal Styled Components
+const PasswordResetModalOverlay = styled.div`
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+`;
+
+const PasswordResetModalContainer = styled.div`
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    overflow: hidden;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const PasswordResetModalHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 2px solid var(--border-color);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+
+    h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    button {
+        background: transparent;
+        border: none;
+        font-size: 2rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+
+        &:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--text-primary);
+        }
+    }
+`;
+
+const PasswordResetModalBody = styled.div`
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+`;
+
+const UserInfo = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+
+    h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    p {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+`;
+
+const InfoBox = styled.div`
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(139, 92, 246, 0.1);
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+
+    svg {
+        flex-shrink: 0;
+        color: #8b5cf6;
+        margin-top: 2px;
+    }
+
+    strong {
+        color: #8b5cf6;
+    }
+`;
+
+const FormGroup = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+`;
+
+const Label = styled.label`
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: block;
+`;
+
+const PasswordWrapper = styled.div`
+    position: relative;
+    width: 100%;
+`;
+
+const EyeToggle = styled.button`
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border-radius: 6px;
+
+    &:hover {
+        color: var(--light-blue);
+        background: rgba(46, 151, 197, 0.1);
+    }
+
+    &:active {
+        transform: translateY(-50%) scale(0.95);
+    }
+`;
+
+const PasswordInput = styled.input`
+    width: 100%;
+    padding: 0.875rem 3rem 0.875rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+
+    &:focus {
+        outline: none;
+        border-color: var(--light-blue);
+        background: var(--bg-primary);
+        box-shadow: 0 0 0 3px rgba(46, 151, 197, 0.1);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: var(--bg-primary);
+    }
+
+    &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.5;
+    }
+`;
+
+const HelpText = styled.span`
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+`;
+
+const PasswordResetModalFooter = styled.div`
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border-color);
+    background: var(--bg-primary);
+`;
+
+const CancelButton = styled.button`
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+
+    &:hover:not(:disabled) {
+        background: var(--hover-color);
+        border-color: var(--text-secondary);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+`;
+
+const ResetButton = styled.button`
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    background: #8b5cf6;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+
+    &:hover:not(:disabled) {
+        background: #7c3aed;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+`;
+
+// Mobile Card Components
+const MobileCardsContainer = styled.div`
+    display: none;
+
+    @media (max-width: 768px) {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+`;
+
+const MobileCard = styled.div`
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px var(--shadow);
+    animation: slideUp 0.4s ease-out backwards;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+
+const MobileCardHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+`;
+
+const MobileActions = styled.div`
+    display: flex;
+    gap: 8px;
+`;
+
+const MobileCardBody = styled.div`
+    padding: 16px;
+`;
+
+const MobileCardRow = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    &:first-child {
+        padding-top: 0;
+    }
+`;
+
+const MobileCardLabel = styled.div`
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+`;
+
+const MobileCardValue = styled.div`
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    max-width: 60%;
+    overflow-wrap: break-word;
 `;
 
 export default UserManagementPage;
