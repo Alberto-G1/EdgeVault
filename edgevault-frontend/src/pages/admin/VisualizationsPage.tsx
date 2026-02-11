@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider as StyledThemeProvider } from 'styled-components';
-import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, Treemap, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
 import * as visualizationService from '../../api/visualizationService';
-import { format } from 'date-fns';
-import { Activity, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Calendar, Clock, FileText, Users, Shield, Download, Filter, RefreshCw } from 'lucide-react';
+import { format, subDays, subYears, startOfDay } from 'date-fns';
+import { Activity, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Calendar, Clock, FileText, Users as UsersIcon, Shield, Download, RefreshCw } from 'lucide-react';
 import Loader from '../../components/common/Loader';
 import { useTheme } from '../../hooks/useTheme';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const PageContainer = styled.div`
   padding: 2rem;
@@ -23,6 +24,18 @@ const PageContainer = styled.div`
       transform: translateY(0);
     }
   }
+
+  @media (max-width: 1024px) {
+    padding: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+  }
 `;
 
 const PageHeader = styled.div`
@@ -35,6 +48,17 @@ const PageHeader = styled.div`
   border: 2px solid ${props => props.theme.mode === 'dark' 
     ? 'rgba(70, 180, 230, 0.2)' 
     : 'rgba(14, 165, 233, 0.1)'};
+
+  @media (max-width: 768px) {
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -51,6 +75,21 @@ const PageTitle = styled.h1`
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+    gap: 0.75rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 1.25rem;
+    gap: 0.5rem;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
 `;
 
 const PageDescription = styled.p`
@@ -59,6 +98,17 @@ const PageDescription = styled.p`
   font-family: 'Poppins', sans-serif;
   margin-left: 3.5rem;
   max-width: 800px;
+
+  @media (max-width: 768px) {
+    font-size: 0.875rem;
+    margin-left: 2.5rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.813rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
 `;
 
 const ControlsContainer = styled.div`
@@ -71,6 +121,18 @@ const ControlsContainer = styled.div`
   border-radius: 16px;
   border: 2px solid ${props => props.theme.border};
   box-shadow: 0 4px 12px ${props => props.theme.shadow};
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+    padding: 1.25rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const RefreshButton = styled.button`
@@ -94,6 +156,16 @@ const RefreshButton = styled.button`
       ? 'rgba(70, 180, 230, 0.4)'
       : 'rgba(6, 182, 212, 0.3)'};
   }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+  }
 `;
 
 const StatsContainer = styled.div`
@@ -101,6 +173,17 @@ const StatsContainer = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const StatCard = styled.div`
@@ -157,6 +240,19 @@ const VisualizationsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 768px) {
+    gap: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const VisualizationCard = styled.div`
@@ -285,6 +381,16 @@ const HeatMapContainer = styled.div`
   border-radius: 12px;
   padding: 1.5rem;
   border: 2px solid ${props => props.theme.border};
+  overflow-x: auto;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+  }
 `;
 
 const HeatMapGrid = styled.div`
@@ -293,6 +399,18 @@ const HeatMapGrid = styled.div`
   grid-template-rows: 30px repeat(7, 40px);
   gap: 2px;
   margin-top: 1rem;
+  min-width: 800px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 40px repeat(24, 1fr);
+    grid-template-rows: 25px repeat(7, 35px);
+    gap: 1px;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 35px repeat(24, 1fr);
+    grid-template-rows: 22px repeat(7, 30px);
+  }
 `;
 
 const HeatMapCell = styled.div<{ intensity: number; $isDark?: boolean }>`
@@ -322,6 +440,16 @@ const HeatMapCell = styled.div<{ intensity: number; $isDark?: boolean }>`
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     z-index: 1;
   }
+
+  @media (max-width: 768px) {
+    font-size: 0.688rem;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.625rem;
+    border-radius: 3px;
+  }
 `;
 
 const HeatMapLabel = styled.div`
@@ -339,11 +467,22 @@ const TableContainer = styled.div`
   border-radius: 12px;
   border: 2px solid ${props => props.theme.border};
   overflow: hidden;
+  overflow-x: auto;
+
+  @media (max-width: 768px) {
+    border-radius: 10px;
+  }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
+
+  @media (max-width: 768px) {
+    min-width: 500px;
+    font-size: 0.875rem;
+  }
 `;
 
 const TableHeader = styled.thead`
@@ -362,6 +501,16 @@ const Th = styled.th`
   letter-spacing: 0.5px;
   font-family: 'Poppins', sans-serif;
   border-bottom: 2px solid ${props => props.theme.border};
+
+  @media (max-width: 768px) {
+    padding: 0.875rem 1rem;
+    font-size: 0.813rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.75rem;
+  }
 `;
 
 const Td = styled.td`
@@ -370,6 +519,16 @@ const Td = styled.td`
   color: ${props => props.theme.text.primary};
   font-family: 'Poppins', sans-serif;
   border-bottom: 1px solid ${props => props.theme.border};
+
+  @media (max-width: 768px) {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.813rem;
+  }
 `;
 
 const Tr = styled.tr`
@@ -388,17 +547,76 @@ const Tr = styled.tr`
   }
 `;
 
-// Light blue/cyan color palette
-const COLORS = [
-  '#06b6d4', '#0ea5e9', '#38bdf8', '#7dd3fc', '#22d3ee', 
-  '#67e8f9', '#0891b2', '#0284c7', '#0369a1', '#0c4a6e'
-];
+const FilterControls = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+`;
+
+const FilterButton = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: ${props => props.theme.backgrounds.primary};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  padding: 8px 14px;
+  transition: all 0.2s;
+
+  svg {
+    color: ${props => props.theme.text.secondary};
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    border-color: ${props => props.theme.mode === 'dark' ? '#46b4e6' : '#06b6d4'};
+    background: ${props => props.theme.backgrounds.secondary};
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    padding: 10px 14px;
+  }
+`;
+
+const FilterSelect = styled.select`
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.text.primary};
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  outline: none;
+  font-weight: 500;
+
+  option {
+    background: ${props => props.theme.backgrounds.secondary};
+    color: ${props => props.theme.text.primary};
+  }
+
+  @media (max-width: 480px) {
+    font-size: 13px;
+    flex: 1;
+  }
+`;
 
 const VisualizationsPage: React.FC = () => {
   const { mode, theme } = useTheme();
+  const { hasAnyPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Filter states
+  const [activityTimeFilter, setActivityTimeFilter] = useState<'7days' | '30days' | '1year' | 'all'>('7days');
+  const [activityUserFilter, setActivityUserFilter] = useState<string>('all');
+  const [growthTimeFilter, setGrowthTimeFilter] = useState<'30days' | '1year' | 'all'>('30days');
 
   const [departmentData, setDepartmentData] = useState<any[]>([]);
   const [activityData, setActivityData] = useState<any[]>([]);
@@ -408,6 +626,9 @@ const VisualizationsPage: React.FC = () => {
   const [heatMapData, setHeatMapData] = useState<any[]>([]);
   const [staleDocuments, setStaleDocuments] = useState<any[]>([]);
   const [topActiveUsers, setTopActiveUsers] = useState<any[]>([]);
+  
+  // Check if user has admin permissions
+  const isAdmin = hasAnyPermission(['USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'ROLE_CREATE']);
 
   // Theme-aware color palettes
   const CHART_COLORS = mode === 'dark' ? {
@@ -476,6 +697,59 @@ const VisualizationsPage: React.FC = () => {
   useEffect(() => {
     loadAllVisualizations();
   }, []);
+  
+  // Get unique usernames for filter
+  const uniqueUsers = Array.from(new Set(activityData.map((a: any) => a.username || 'Unknown'))).sort();
+  
+  // Filter activity data based on time and user
+  const filteredActivityData = activityData.filter((activity: any) => {
+    const activityDate = new Date(activity.date);
+    const now = new Date();
+    let timeMatch = true;
+    
+    // Apply time filter using timestamp comparison (>= instead of strictly >)
+    switch (activityTimeFilter) {
+      case '7days':
+        const sevenDaysAgo = startOfDay(subDays(now, 7));
+        timeMatch = activityDate.getTime() >= sevenDaysAgo.getTime();
+        break;
+      case '30days':
+        const thirtyDaysAgo = startOfDay(subDays(now, 30));
+        timeMatch = activityDate.getTime() >= thirtyDaysAgo.getTime();
+        break;
+      case '1year':
+        const oneYearAgo = startOfDay(subYears(now, 1));
+        timeMatch = activityDate.getTime() >= oneYearAgo.getTime();
+        break;
+      case 'all':
+        timeMatch = true;
+        break;
+    }
+    
+    // Apply user filter (admins only)
+    const userMatch = activityUserFilter === 'all' || activity.username === activityUserFilter;
+    
+    return timeMatch && (isAdmin ? userMatch : true);
+  });
+  
+  // Filter document growth data based on time filter
+  const filteredGrowthData = growthData.filter((item: any) => {
+    const itemDate = new Date(item.period);
+    const now = new Date();
+    
+    switch (growthTimeFilter) {
+      case '30days':
+        const thirtyDaysAgo = startOfDay(subDays(now, 30));
+        return itemDate.getTime() >= thirtyDaysAgo.getTime();
+      case '1year':
+        const oneYearAgo = startOfDay(subYears(now, 1));
+        return itemDate.getTime() >= oneYearAgo.getTime();
+      case 'all':
+        return true;
+      default:
+        return true;
+    }
+  });
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -650,7 +924,7 @@ const VisualizationsPage: React.FC = () => {
             background: mode === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(103, 232, 249, 0.1)', 
             color: mode === 'dark' ? '#8b5cf6' : '#67e8f9' 
           }}>
-            <Users size={24} />
+            <UsersIcon size={24} />
           </StatIcon>
           <StatContent>
             <StatLabel>Active Users</StatLabel>
@@ -685,9 +959,9 @@ const VisualizationsPage: React.FC = () => {
                 innerRadius={60}
                 outerRadius={100}
                 paddingAngle={2}
-                label={(entry) => `${entry.departmentName}: ${entry.documentCount}`}
+                label={(entry: any) => `${entry.departmentName}: ${entry.documentCount}`}
               >
-                {departmentData.map((entry, index) => (
+                {departmentData.map((_entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={CHART_COLORS.donut[index % CHART_COLORS.donut.length]}
@@ -720,22 +994,52 @@ const VisualizationsPage: React.FC = () => {
             }}>
               <Activity size={24} />
             </CardIcon>
-            <CardTitle>Recent User Activity</CardTitle>
+            <CardTitle>{isAdmin ? 'System Activity' : 'My Recent Activity'}</CardTitle>
           </CardHeader>
           <CardDescription>
-            System activity over the last 7 days - monitor usage trends and system health
+            {isAdmin ? 'System activity trends - monitor usage and engagement' : 'Your activity over the selected time period'}
           </CardDescription>
+          <FilterControls>
+            <FilterButton>
+              <Calendar size={16} />
+              <FilterSelect 
+                value={activityTimeFilter} 
+                onChange={(e) => setActivityTimeFilter(e.target.value as any)}
+              >
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="1year">Last Year</option>
+                <option value="all">All Time</option>
+              </FilterSelect>
+            </FilterButton>
+            {isAdmin && uniqueUsers.length > 0 && (
+              <FilterButton>
+                <UsersIcon size={16} />
+                <FilterSelect 
+                  value={activityUserFilter} 
+                  onChange={(e) => setActivityUserFilter(e.target.value)}
+                >
+                  <option value="all">All Users</option>
+                  {uniqueUsers.map(username => (
+                    <option key={username} value={username}>{username}</option>
+                  ))}
+                </FilterSelect>
+              </FilterButton>
+            )}
+          </FilterControls>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={activityData}>
+            <AreaChart data={filteredActivityData}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis 
                 dataKey="date" 
                 stroke={CHART_COLORS.text}
                 fontFamily="'Poppins', sans-serif"
+                fontSize={12}
               />
               <YAxis 
                 stroke={CHART_COLORS.text}
                 fontFamily="'Poppins', sans-serif"
+                fontSize={12}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -781,17 +1085,32 @@ const VisualizationsPage: React.FC = () => {
           <CardDescription>
             Cumulative document growth - track adoption and plan capacity requirements
           </CardDescription>
+          <FilterControls>
+            <FilterButton>
+              <Calendar size={16} />
+              <FilterSelect 
+                value={growthTimeFilter} 
+                onChange={(e) => setGrowthTimeFilter(e.target.value as any)}
+              >
+                <option value="30days">Last 30 Days</option>
+                <option value="1year">Last Year</option>
+                <option value="all">All Time</option>
+              </FilterSelect>
+            </FilterButton>
+          </FilterControls>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={growthData}>
+            <LineChart data={filteredGrowthData}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis 
                 dataKey="period" 
                 stroke={CHART_COLORS.text}
                 fontFamily="'Poppins', sans-serif"
+                fontSize={12}
               />
               <YAxis 
                 stroke={CHART_COLORS.text}
                 fontFamily="'Poppins', sans-serif"
+                fontSize={12}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -840,9 +1159,8 @@ const VisualizationsPage: React.FC = () => {
               startAngle={180} 
               endAngle={0}
             >
-              <RadialBar 
-                minAngle={15} 
-                label={{ 
+              <RadialBar
+                label={{
                   position: 'insideStart', 
                   fill: '#fff',
                   fontFamily: "'Poppins', sans-serif"
@@ -850,7 +1168,7 @@ const VisualizationsPage: React.FC = () => {
                 background 
                 dataKey="count" 
               >
-                {statusData.map((entry, index) => (
+                {statusData.map((_entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={CHART_COLORS.donut[index % CHART_COLORS.donut.length]}
@@ -880,7 +1198,7 @@ const VisualizationsPage: React.FC = () => {
               background: mode === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(6, 182, 212, 0.1)', 
               color: mode === 'dark' ? '#8b5cf6' : '#06b6d4' 
             }}>
-              <Users size={24} />
+              <UsersIcon size={24} />
             </CardIcon>
             <CardTitle>Top 5 Most Active Users</CardTitle>
           </CardHeader>
@@ -930,7 +1248,7 @@ const VisualizationsPage: React.FC = () => {
           </ResponsiveContainer>
         </VisualizationCard>
 
-        {/* File Type Distribution - Treemap */}
+        {/* File Type Distribution - Improved Bar Chart */}
         <FullWidthCard>
           <CardHeader>
             <CardIcon style={{ 
@@ -939,71 +1257,70 @@ const VisualizationsPage: React.FC = () => {
             }}>
               <BarChartIcon size={24} />
             </CardIcon>
-            <CardTitle>File Type Distribution</CardTitle>
+            <CardTitle>File Type Distribution & Storage</CardTitle>
           </CardHeader>
           <CardDescription>
-            Storage utilization by file type - identify what consumes the most space
+            Storage utilization by file type - identify what consumes the most space and optimize storage
           </CardDescription>
           <ResponsiveContainer width="100%" height={400}>
-            <Treemap
-              data={fileTypeData}
-              dataKey="totalSize"
-              nameKey="fileType"
-              stroke={mode === 'dark' ? '#252839' : '#fff'}
-              strokeWidth={2}
-              content={({ x, y, width, height, name, value, count }: any) => (
-                <g>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    style={{
-                      fill: CHART_COLORS.fileType[fileTypeData.findIndex(d => d.fileType === name) % CHART_COLORS.fileType.length],
-                      stroke: mode === 'dark' ? '#252839' : '#fff',
-                      strokeWidth: 2,
-                      rx: 8,
-                      ry: 8
-                    }}
+            <BarChart data={fileTypeData} layout="vertical" margin={{ left: 20, right: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+              <XAxis 
+                type="number"
+                stroke={CHART_COLORS.text}
+                fontFamily="'Poppins', sans-serif"
+                fontSize={12}
+                tickFormatter={(value) => formatBytes(value)}
+              />
+              <YAxis 
+                dataKey="fileType" 
+                type="category"
+                width={80}
+                stroke={CHART_COLORS.text}
+                fontFamily="'Poppins', sans-serif"
+                fontSize={12}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  background: theme.backgrounds.secondary,
+                  border: `2px solid ${theme.border}`,
+                  borderRadius: '12px',
+                  fontFamily: "'Poppins', sans-serif",
+                  color: theme.text.primary
+                }}
+                formatter={(value: any, name?: string) => {
+                  if (name === 'Storage') return formatBytes(value);
+                  return value;
+                }}
+              />
+              <Legend 
+                wrapperStyle={{ fontFamily: "'Poppins', sans-serif" }}
+              />
+              <Bar 
+                dataKey="totalSize" 
+                name="Storage"
+                radius={[0, 10, 10, 0]}
+              >
+                {fileTypeData.map((_entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={CHART_COLORS.fileType[index % CHART_COLORS.fileType.length]}
                   />
-                  {width > 80 && height > 50 && (
-                    <>
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 - 15}
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize={14}
-                        fontWeight="bold"
-                        fontFamily="'Poppins', sans-serif"
-                      >
-                        {name.toUpperCase()}
-                      </text>
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2}
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize={12}
-                        fontFamily="'Poppins', sans-serif"
-                      >
-                        {formatBytes(value)}
-                      </text>
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 + 15}
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize={11}
-                        fontFamily="'Poppins', sans-serif"
-                      >
-                        {count} file{count !== 1 ? 's' : ''}
-                      </text>
-                    </>
-                  )}
-                </g>
-              )}
-            />
+                ))}
+              </Bar>
+              <Bar 
+                dataKey="count" 
+                name="File Count"
+                radius={[0, 10, 10, 0]}
+              >
+                {fileTypeData.map((_entry, index) => (
+                  <Cell 
+                    key={`cell-count-${index}`} 
+                    fill={`${CHART_COLORS.fileType[index % CHART_COLORS.fileType.length]}80`}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </FullWidthCard>
 
@@ -1078,7 +1395,7 @@ const VisualizationsPage: React.FC = () => {
                           alignItems: 'center', 
                           gap: '0.5rem' 
                         }}>
-                          <Users size={14} color="#64748b" />
+                          <UsersIcon size={14} color="#64748b" />
                           {doc.departmentName}
                         </div>
                       </Td>
